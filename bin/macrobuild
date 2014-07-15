@@ -1,0 +1,141 @@
+#!/usr/bin/perl
+#
+# Build something.
+#
+# This file is part of Macrobuild.
+# (C) 2014 Johannes Ernst
+#
+# Macrobuild is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Macrobuild is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Macrobuild.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+use strict;
+use warnings;
+
+use Macrobuild::Logging;
+use Macrobuild::Settings;
+use Macrobuild::TaskRun;
+
+my @taskNames; # names of the tasks to run
+my $verbose;
+my $help;
+my $logconf;
+my $vars = {};
+
+for( my $i=0 ; $i<=$#ARGV ; ++$i ) {
+    if( $ARGV[$i] eq '-v' || $ARGV[$i] eq '--verbose' ) {
+        $verbose = 1;
+    } elsif( $ARGV[$i] eq '-h' || $ARGV[$i] eq '--help' ) {
+        $help = 1;
+    } elsif( $ARGV[$i] eq '-l' || $ARGV[$i] eq '--logconf' ) {
+        ++$i;
+        if( $i<= $#ARGV ) {
+            $logconf = $ARGV[$i];
+        } else {
+            synopsisHelpQuit();
+        }
+        
+    } elsif( $ARGV[$i] =~ m!^--?(\S+)$! ) {
+        my $name = $1;
+        ++$i;
+        if( $i<= $#ARGV ) {
+            $vars->{$name} = $ARGV[$i];
+        } else {
+            synopsisHelpQuit();
+        }
+    } else {
+       push @taskNames, $ARGV[$i];
+    }
+}
+if( $logconf ) {
+    Macrobuild::Logging::setLog4PerlConf( $logconf );
+}
+
+if( $verbose ) {
+    Macrobuild::Logging::setVerbose();
+}
+
+if( $help ) {
+    synopsisHelpQuit( 1 );
+}
+if( !@taskNames ) {
+    synopsisHelpQuit();
+}
+
+my $settings = new Macrobuild::Settings( $vars );
+
+my @tasks = ();
+foreach my $taskName ( @taskNames ) {
+    if( $taskName =~ m!::! ) {
+        # Perl package name has been given as a task name
+        eval "require $taskName" || fatal( 'Cannot load package', "$taskName\n", $@ );
+    } else {
+        my $fileName = $taskName;
+        if( $fileName =~ m!^(.*)\.pm$! ) {
+            $taskName = $1;
+        } else {
+            $fileName = "$fileName.pm";
+        }
+        eval "require '$fileName';" || fatal( 'Cannot read file', "$fileName\n", $@ );
+        $taskName =~ s!/!::!g;
+    }
+    my $t = $taskName->new;
+    unless( $t ) {
+        fatal( "Cannot find or run task $taskName" );
+    }
+
+    my $run = new Macrobuild::TaskRun( $settings, undef );
+
+    my $ret = $t->run( $run );
+    if( $ret < 0 ) {
+        error( "Aborting with error" );
+        exit( $ret );
+    }
+
+    # print "Task run is over: " . $run->resultsAsString() . "\n";
+}
+
+exit 0;
+
+#####
+sub synopsisHelpQuit {
+    my $long   = shift;
+
+    if( $long ) {
+print <<END;
+Run a build task.
+
+END
+    } else {
+        print "Synopsis:\n";
+    }
+    print "    $0 [ --verbose ][ --logconf <log4perlconf> ][ --<key> <value> ]... <taskname> ...\n";
+    if( $long ) {
+        print <<END;
+        Run the named build tasks. Optionally, specify parameters as key-value pairs that will be
+        available to the tasks, and a log configuration file.
+
+END
+    }
+    print "    $0 --help\n";
+    if( $long ) {
+        print <<END;
+        Display help text.
+
+END
+    }
+
+    exit 0;
+}
+
+1;
