@@ -21,9 +21,9 @@
 use strict;
 use warnings;
 
-package MacroBuild::CompositeTasks::MergeValuesTask;
+package Macrobuild::CompositeTasks::MergeValuesTask;
 
-use base qw( MacroBuild::Task );
+use base qw( Macrobuild::Task );
 use fields qw( keys );
 
 use Macrobuild::Logging;

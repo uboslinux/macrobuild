@@ -21,9 +21,9 @@
 use strict;
 use warnings;
 
-package MacroBuild::BasicTasks::Report;
+package Macrobuild::BasicTasks::Report;
 
-use base qw( MacroBuild::Task );
+use base qw( Macrobuild::Task );
 use fields qw( fields );
 
 use Macrobuild::Logging;

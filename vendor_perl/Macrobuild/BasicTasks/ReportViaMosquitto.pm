@@ -21,9 +21,9 @@
 use strict;
 use warnings;
 
-package MacroBuild::BasicTasks::ReportViaMosquitto;
+package Macrobuild::BasicTasks::ReportViaMosquitto;
 
-use base qw( MacroBuild::Task );
+use base qw( Macrobuild::Task );
 use fields qw( fieldsChannels );
 
 use Macrobuild::Logging;

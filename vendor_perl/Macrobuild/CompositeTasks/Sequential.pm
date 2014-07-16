@@ -21,9 +21,9 @@
 use strict;
 use warnings;
 
-package MacroBuild::CompositeTasks::Sequential;
+package Macrobuild::CompositeTasks::Sequential;
 
-use base qw( MacroBuild::Task );
+use base qw( Macrobuild::Task );
 use fields qw( tasks );
 
 use Macrobuild::Logging;

@@ -22,9 +22,9 @@
 use strict;
 use warnings;
 
-package MacroBuild::CompositeTasks::SplitJoin;
+package Macrobuild::CompositeTasks::SplitJoin;
 
-use base qw( MacroBuild::Task );
+use base qw( Macrobuild::Task );
 use fields qw( splitTask parallelTasks joinTask );
 
 use Macrobuild::Logging;

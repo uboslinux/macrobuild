@@ -1,12 +1,12 @@
 pkgname=macrobuild
-pkgver=0.1
+pkgver=0.2
 pkgrel=1
 pkgdesc="Testing and release framework"
 arch=('any')
-url="http://uboc.indiebox.net/"
+url="http://ubos.indiebox.net/"
 license=('GPL')
 groups=()
-depends=()
+depends=('perl')
 backup=()
 source=()
 options=('!strip')

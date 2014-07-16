@@ -25,25 +25,37 @@ package Macrobuild::Settings;
 
 use Macrobuild::Logging;
 
-use fields qw( vars );
+use fields qw( name vars );
 
 ##
 # Constructor
+# $name: name of the settings object, in case there is more than one
 # $vars: variables available to the tasks
 sub new {
     my $self = shift;
+    my $name = shift;
     my $vars = shift;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
 
+    $self->{name} = $name;
     $self->{vars} = $vars;
 
     my ( $sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst ) = gmtime( time() );
     $self->{vars}->{tstamp} = sprintf "%.4d%.2d%.2d-%.2d%.2d%.2d", ($year+1900), ( $mon+1 ), $mday, $hour, $min, $sec;
     
     return $self;
+}
+
+##
+# Get name of the settings object
+# return: name
+sub getName {
+    my $self = shift;
+
+    return $self->{name};
 }
 
 ##
@@ -71,10 +83,14 @@ sub replaceVariables {
     my $undefIfUndef = shift;
 
     my $ret = $s;
-    $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getVariable( $1, '${?}' )/ge;
+    $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getVariable( $1, '${? ' . $1 . '}' )/ge;
 
-    if( $undefIfUndef && $ret =~ m!\$\{\?\}! ) {
-        $ret = undef;
+    if( $ret =~ m!\$\{\?.*\}! ) {
+        if( $undefIfUndef ) {
+            $ret = undef;
+        } else {
+            fatal( "Unknown variable in string", $s, ", best we can do is", $ret );
+        }
     }
     return $ret;
 }

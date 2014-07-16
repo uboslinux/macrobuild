@@ -72,7 +72,7 @@ if( !@taskNames ) {
     synopsisHelpQuit();
 }
 
-my $settings = new Macrobuild::Settings( $vars );
+my $settings = new Macrobuild::Settings( 'default', $vars );
 
 my @tasks = ();
 foreach my $taskName ( @taskNames ) {
