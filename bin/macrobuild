@@ -27,14 +27,14 @@ use Macrobuild::Settings;
 use Macrobuild::TaskRun;
 
 my @taskNames; # names of the tasks to run
-my $verbose;
+my $verbose = 0;
 my $help;
 my $logconf;
 my $vars = {};
 
 for( my $i=0 ; $i<=$#ARGV ; ++$i ) {
     if( $ARGV[$i] eq '-v' || $ARGV[$i] eq '--verbose' ) {
-        $verbose = 1;
+        $verbose += 1;
     } elsif( $ARGV[$i] eq '-h' || $ARGV[$i] eq '--help' ) {
         $help = 1;
     } elsif( $ARGV[$i] eq '-l' || $ARGV[$i] eq '--logconf' ) {
@@ -60,9 +60,8 @@ for( my $i=0 ; $i<=$#ARGV ; ++$i ) {
 if( $logconf ) {
     Macrobuild::Logging::setLog4PerlConf( $logconf );
 }
-
 if( $verbose ) {
-    Macrobuild::Logging::setVerbose();
+    Macrobuild::Logging::setVerbose( $verbose );
 }
 
 if( $help ) {
@@ -95,6 +94,8 @@ foreach my $taskName ( @taskNames ) {
     }
 
     my $run = new Macrobuild::TaskRun( $settings, undef );
+
+    debug( "About to run", ref( $t ));
 
     my $ret = $t->run( $run );
     if( $ret < 0 ) {

@@ -104,6 +104,7 @@ sub ensureDirectories {
     my @dirs = @_;
 
     foreach my $dir ( @dirs ) {
+
         $dir = $self->replaceVariables( $dir );
 
         _ensureDirectory( $dir );
@@ -114,11 +115,8 @@ sub _ensureDirectory {
     my $dir = shift;
 
     unless( -d $dir ) {
-        my $parentDir = $dir;
-        $parentDir =~ s!^(.*)/([^/]*)$!$1!;
-
-        if( $parentDir ) {
-            _ensureDirectory( $parentDir );
+        if( $dir =~ m!^(.+)/([^/]+)/?$! ) {
+            _ensureDirectory( $1 );
         }
 
         mkdir( $dir ) || fatal( 'Could not create directory', $dir );

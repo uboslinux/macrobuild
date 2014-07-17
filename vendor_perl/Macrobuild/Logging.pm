@@ -28,11 +28,12 @@ use Log::Log4perl qw( :easy );
 use Log::Log4perl::Level;
 
 our @EXPORT = qw( trace debug info warn error fatal );
-my $log;
+our $log;
 
 BEGIN {
-    my $config = q(
-log4perl.rootLogger=INFO,CONSOLE
+    unless( Log::Log4perl::initialized ) {
+        my $config = q(
+log4perl.rootLogger=DEBUG,CONSOLE
 
 log4perl.appender.CONSOLE=Log::Log4perl::Appender::Screen
 log4perl.appender.CONSOLE.stderr=1
@@ -40,10 +41,11 @@ log4perl.appender.CONSOLE.layout=PatternLayout
 log4perl.appender.CONSOLE.layout.ConversionPattern=%-5p: %m%n
 log4perl.appender.CONSOLE.Threshold=WARN
 );
-    Log::Log4perl->init( \$config );
+        Log::Log4perl->init( \$config );
+    }
 
     $log = Log::Log4perl->get_logger( __FILE__ );
-    $log->trace( 'Initialized log4perl' );
+    $log->trace( 'Initialized log4perl -- trace' );
 }
 
 ##
@@ -67,10 +69,18 @@ sub setQuiet {
 ##
 # Verbose output
 sub setVerbose {
+    my $level = shift;
+
     my $consoleAppender = Log::Log4perl->appenders()->{'CONSOLE'};
 
     if( $consoleAppender ) {
-        $consoleAppender->threshold( $INFO );
+        if( $level >= 3 ) {
+            $consoleAppender->threshold( $TRACE );
+        } elsif( $level >= 2 ) {
+            $consoleAppender->threshold( $DEBUG );
+        } else {
+            $consoleAppender->threshold( $INFO );
+        }
     }
 }
     
