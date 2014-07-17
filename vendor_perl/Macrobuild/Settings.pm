@@ -95,32 +95,4 @@ sub replaceVariables {
     return $ret;
 }
 
-##
-# Convenience method to ensure certain directories exist before or during a build.
-# This creates missing parent directories recursively.
-# @dirs: names of the directories, which may contain variable names
-sub ensureDirectories {
-    my $self = shift;
-    my @dirs = @_;
-
-    foreach my $dir ( @dirs ) {
-
-        $dir = $self->replaceVariables( $dir );
-
-        _ensureDirectory( $dir );
-    }
-}
-
-sub _ensureDirectory {
-    my $dir = shift;
-
-    unless( -d $dir ) {
-        if( $dir =~ m!^(.+)/([^/]+)/?$! ) {
-            _ensureDirectory( $1 );
-        }
-
-        mkdir( $dir ) || fatal( 'Could not create directory', $dir );
-    }
-}
-
 1;
