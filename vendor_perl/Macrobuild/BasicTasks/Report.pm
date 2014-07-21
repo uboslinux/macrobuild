@@ -43,7 +43,7 @@ sub run {
     $run->taskEnded( $self, {} );
 
     if( %$report ) {
-        print $self->{name} . ":\n";
+        print $run->getSettings->replaceVariables( $self->{name} ) . ":\n";
         while( my( $name, $value ) = each %$report ) {
             print "$name: ";
             if( ref( $value ) eq 'ARRAY' ) {

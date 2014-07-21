@@ -117,8 +117,8 @@ sub taskStarting {
             $lastElement->{status} = 1;
             $lastElement->{task}   = $task;
 
-            info( 'Starting task', $task->name );
-            debug( 'Task input:', sub { _resultsAsString( $lastElement->{in} ) }  );
+            info( 'Starting task', sub { $self->{settings}->replaceVariables( $task->name ) } );
+            debug( 'Task input:',  sub { _resultsAsString( $lastElement->{in} ) }  );
 
             return $lastElement->{in};
             
