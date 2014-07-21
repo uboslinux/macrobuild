@@ -102,7 +102,7 @@ sub debug {
     my @msg = @_;
 
     if( $log->is_debug()) {
-        $log->debug( join( ' ', @msg ));
+        $log->debug( join( ' ', map { my $arg = $_; ref( $arg ) eq 'CODE' ? &{\&{$arg}} : $arg } @msg ));
     }
 }
 
@@ -113,7 +113,7 @@ sub info {
     my @msg = @_;
 
     if( $log->is_info()) {
-        $log->info( join( ' ', @msg ));
+        $log->info( join( ' ', map { my $arg = $_; ref( $arg ) eq 'CODE' ? &{\&{$arg}} : $arg } @msg ));
     }
 }
 
@@ -124,7 +124,7 @@ sub warn {
     my @msg = @_;
 
     if( $log->is_warn()) {
-        $log->warn( join( ' ', @msg ));
+        $log->warn( join( ' ', map { my $arg = $_; ref( $arg ) eq 'CODE' ? &{\&{$arg}} : $arg } @msg ));
     }
 }
 
@@ -135,7 +135,7 @@ sub error {
     my @msg = @_;
 
     if( $log->is_error()) {
-        $log->error( join( ' ', @msg ));
+        $log->error( join( ' ', map { my $arg = $_; ref( $arg ) eq 'CODE' ? &{\&{$arg}} : $arg } @msg ));
     }
 }
 
@@ -146,7 +146,7 @@ sub fatal {
     my @msg = @_;
 
     if( $log->is_fatal()) {
-        $log->fatal( join( ' ', @msg ));
+        $log->fatal( join( ' ', map { my $arg = $_; ref( $arg ) eq 'CODE' ? &{\&{$arg}} : $arg } @msg ));
     }
 
     exit 1;

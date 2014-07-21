@@ -118,6 +118,7 @@ sub taskStarting {
             $lastElement->{task}   = $task;
 
             info( 'Starting task', $task->name );
+            debug( 'Task input:', sub { _resultsAsString( $lastElement->{in} ) }  );
 
             return $lastElement->{in};
             
@@ -142,6 +143,8 @@ sub taskEnded {
     my $self   = shift;
     my $task   = shift;
     my $output = shift;
+
+    debug( 'Task output:', sub { _resultsAsString( $output ) }  );
 
     if( @{$self->{steps}} ) {
         my $lastElement = $self->{steps}->[-1];
@@ -220,11 +223,13 @@ sub resultsAsString {
 # For debugging
 sub _resultsAsString {
     my $obj    = shift;
-    my $indent = shift;
+    my $indent = shift || 0 ;
     
     my $is = '    ' x $indent;
 
-    if( ref( $obj ) eq 'HASH' ) {
+    if( !defined( $obj )) {
+		return '<undef>';
+	} elsif( ref( $obj ) eq 'HASH' ) {
         return "{\n"
                . join( '',
                        map {
