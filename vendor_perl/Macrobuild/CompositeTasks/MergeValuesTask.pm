@@ -58,13 +58,8 @@ sub _merge {
     foreach my $arg ( @arguments ) {
         if( defined( $arg )) {
             if( defined( $type )) {
-                if( $type ) {
-                    if( $type ne ref( $arg )) {
-                        error( "Cannot merge types:", $type, "vs.", ref( $arg ));
-                        return -1;
-                    }
-                } else {
-                    error( "Cannot merge strings" );
+                if( $type ne ref( $arg )) {
+                    error( "Cannot merge types:", $type, "vs.", ref( $arg ));
                     return -1;
                 }
             } else {
@@ -106,7 +101,14 @@ sub _merge {
     } elsif( $type eq '' ) {
         foreach my $arg ( @arguments ) {
             if( defined( $arg )) {
-                $ret = $arg; # there should be only one
+                if( !defined( $ret )) {
+                    # one, maybe the only one
+                    $ret = $arg;
+                } elsif( ref( $ret ) eq 'ARRAY' ) {
+                    push @$ret, $arg;
+                } else {
+                    $ret = [ $ret, $arg ]; # push them into an array
+                }
             }
         }
 

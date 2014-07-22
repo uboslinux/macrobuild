@@ -40,8 +40,6 @@ sub run {
     my $report = {};
     $self->_report( $run, $report );
 
-    $run->taskEnded( $self, {} );
-
     my $runChannel = $self->{fieldsChannels}->{''};
     if( $runChannel ) {
         $runChannel = $run->getSettings->replaceVariables( $runChannel, 1 );
@@ -55,18 +53,15 @@ sub run {
             if( $channel ) {
                 $channel = $run->getSettings->replaceVariables( $channel, 1 );
                 if( $channel ) {
-                    my $msg;
-                    if( ref( $value ) eq 'ARRAY' ) {
-                        $msg = join( ' ', @$value );
-                    } else {
-                        $msg = $value;
-                    }
-                    
-                    system( "mosquitto_pub -t '$channel' -m '$msg'" );
+                    system( "mosquitto_pub -t '$channel' -m '$value'" );
                 }
             }
         }
-        
+    }
+
+    $run->taskEnded( $self, $report );
+
+    if( %$report ) {
         return 0;
     } else {
         return 1;
@@ -82,19 +77,33 @@ sub _report {
     
     my $steps  = $run->getSteps;
     
-    foreach my $field ( values %{$self->{fieldsChannels}} ) {
+    foreach my $field ( keys %{$self->{fieldsChannels}} ) {
         foreach my $step ( @$steps ) {
             foreach my $subRun ( @{$step->{subRuns}} ) {
                 $self->_report( $subRun, $report );
             }
             if( defined( $step->{out}->{$field} )) {
                 my $value = $step->{out}->{$field};
-                if(   ( ref( $value ) eq 'ARRAY' && @$value )
-                   || ( ref( $value ) eq 'HASH' && %$value )
-                   || ( !ref( $value ) && $value ))
-                {
-                    # later ones overwrite the earliest ones; that's probably ok/intended
-                    $report->{$field} = $value;
+                my $type = ref( $value );
+                my $msg;
+                if( 'ARRAY' eq $type ) {
+                    $msg = join( ' ', @$value );
+                } elsif( 'HASH' eq $type ) {
+                    $msg = join( ' ', map { "$_ => " . $value->{$_} } keys %$value );
+                } else {
+                    $msg = $value;
+                }
+                if( $report->{$field} ) {
+                    if( $report->{$field} =~ m!\Q$msg\E(\((\d+)\))?! ) {
+                        my $n = $2;
+                        ++$n;
+                        $report->{$field} =~ s!\Q$msg\E\(\d+\)!$msg($n)!;
+                    } else {
+                        $report->{$field} .= ' ' . $msg;
+                    }
+                    
+                } else {
+                    $report->{$field} = $msg;
                 }
             }
         }

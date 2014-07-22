@@ -25,7 +25,7 @@ use warnings;
 package Macrobuild::CompositeTasks::SplitJoin;
 
 use base qw( Macrobuild::Task );
-use fields qw( splitTask parallelTasks joinTask );
+use fields qw( splitTask splitParallelTaskInputs parallelTasks joinTask );
 
 use Macrobuild::Logging;
 
@@ -66,7 +66,7 @@ sub run {
     if( $continue ) {
         my $outData = {};
         while( my( $taskName, $task ) = each %{$self->{parallelTasks}} ) {
-            my $childRun = $run->createChildRun( $nextIn->{$taskName} );
+            my $childRun = $run->createChildRun( $self->{splitParallelTaskInputs} ? $nextIn->{$taskName} : $nextIn );
 
             my $taskRet = $task->run( $childRun );
 
