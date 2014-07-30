@@ -31,7 +31,7 @@ use warnings;
 
 package Macrobuild::TaskRun;
 
-use fields qw( settings steps );
+use fields qw( settings interactive steps );
 
 use Macrobuild::TaskRunStep;
 use Macrobuild::Logging;
@@ -39,16 +39,19 @@ use Macrobuild::Logging;
 ##
 # Constructor
 # $settings: the settings
-# $in: the input values
+# $in: the input values, if any
+# $interactive: if 1, wait for user input at the end of each task
 sub new {
-    my $self     = shift;
-    my $settings = shift;
-    my $in       = shift;
+    my $self        = shift;
+    my $settings    = shift;
+    my $in          = shift;
+    my $interactive = shift;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    $self->{settings} = $settings;
+    $self->{settings}    = $settings;
+    $self->{interactive} = $interactive;
     $self->{steps} = [
             new Macrobuild::TaskRunStep( $in )
     ];
@@ -69,7 +72,7 @@ sub createChildRun {
         my $lastElement = $self->{steps}->[-1];
         
         if( $lastElement->{status} == 1 ) {
-            $ret = new Macrobuild::TaskRun( $self->{settings}, $in );
+            $ret = new Macrobuild::TaskRun( $self->{settings}, $in, $self->{interactive} );
 
             push @{$lastElement->{subRuns}}, $ret;
             
@@ -145,6 +148,11 @@ sub taskEnded {
     my $output = shift;
 
     debug( 'Task output:', sub { _resultsAsString( $output ) }  );
+
+    if( $self->{interactive} ) {
+        print "Task ended. Hit return to continue.\n";
+        getc();
+    }
 
     if( @{$self->{steps}} ) {
         my $lastElement = $self->{steps}->[-1];

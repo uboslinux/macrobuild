@@ -28,12 +28,15 @@ use Macrobuild::TaskRun;
 
 my @taskNames; # names of the tasks to run
 my $verbose = 0;
+my $interactive;
 my $help;
 my $logconf;
 my $vars = {};
 
 for( my $i=0 ; $i<=$#ARGV ; ++$i ) {
-    if( $ARGV[$i] eq '-v' || $ARGV[$i] eq '--verbose' ) {
+    if( $ARGV[$i] eq '-i' || $ARGV[$i] eq '--interactive' ) {
+        $interactive = 1;
+    } elsif( $ARGV[$i] eq '-v' || $ARGV[$i] eq '--verbose' ) {
         $verbose += 1;
     } elsif( $ARGV[$i] eq '-h' || $ARGV[$i] eq '--help' ) {
         $help = 1;
@@ -93,7 +96,7 @@ foreach my $taskName ( @taskNames ) {
         fatal( "Cannot find or run task $taskName" );
     }
 
-    my $run = new Macrobuild::TaskRun( $settings, undef );
+    my $run = new Macrobuild::TaskRun( $settings, undef, $interactive );
 
     debug( "About to run", ref( $t ));
 
