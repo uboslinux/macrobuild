@@ -1,5 +1,5 @@
 pkgname=macrobuild
-pkgver=0.6
+pkgver=0.7
 pkgrel=1
 pkgdesc="Testing and release framework"
 arch=('any')

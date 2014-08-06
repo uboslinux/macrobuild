@@ -65,6 +65,7 @@ sub parameter {
 ##
 # Run this task.
 # $run: the inputs, outputs, settings and possible other context info for the run
+# return value: -1: error. 0: success. 1: nothing to do
 sub run {
     my $self = shift;
     my $run  = shift;
