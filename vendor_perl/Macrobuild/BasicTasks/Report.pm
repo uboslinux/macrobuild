@@ -45,12 +45,13 @@ sub run {
     if( %$report ) {
         print $run->getSettings->replaceVariables( $self->{name} ) . ":\n";
         while( my( $name, $value ) = each %$report ) {
-            print "$name: ";
             if( ref( $value ) eq 'ARRAY' ) {
-                print join( ' ', @$value );
+                print "$name: " . join( ' ', @$value );
                 print "\n";
+            } elsif( ref( $value ) eq 'HASH' ) {
+                print join( '', map { "$name: $_ => " . $value->{$_} . "\n" } keys %$value );
             } else {
-                print "$value\n";
+                print "$name: $value\n";
             }
         }
         
