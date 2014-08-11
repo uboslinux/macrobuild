@@ -57,13 +57,14 @@ sub _merge {
     my $type = undef;
     foreach my $arg ( @arguments ) {
         if( defined( $arg )) {
+            my $argType = ref( $arg );
             if( defined( $type )) {
-                if( $type ne ref( $arg )) {
-                    error( "Cannot merge types:", $type, "vs.", ref( $arg ));
-                    return -1;
+                if( $argType && $type ne $argType ) {
+                    error( "Cannot merge types:", $type, "vs.", $argType );
+                    return 'Error merging types';
                 }
             } else {
-                $type = ref( $arg );
+                $type = $argType;
             }
         }
     }
@@ -77,12 +78,16 @@ sub _merge {
 
         foreach my $arg ( @arguments ) {
             if( defined( $arg )) {
-                while( my( $valueKey, $valueValue ) = each %$arg ) {
-                    if( exists( $ret->{$valueKey} )) {
-                        $ret->{$valueKey} = _merge( $ret->{$valueKey}, $valueValue );
-                    } else {
-                        $ret->{$valueKey} = $valueValue;
+                if( ref( $arg ) eq 'HASH' ) {
+                    while( my( $valueKey, $valueValue ) = each %$arg ) {
+                        if( exists( $ret->{$valueKey} )) {
+                            $ret->{$valueKey} = _merge( $ret->{$valueKey}, $valueValue );
+                        } else {
+                            $ret->{$valueKey} = $valueValue;
+                        }
                     }
+                } else {
+                    $ret->{$arg} = {};
                 }
             }
         }
@@ -92,8 +97,12 @@ sub _merge {
 
         foreach my $arg ( @arguments ) {
             if( defined( $arg )) {
-                foreach my $valueValue ( @$arg ) {
-                    push @$ret, $valueValue;
+                if( ref( $arg ) eq 'ARRAY' ) {
+                    foreach my $valueValue ( @$arg ) {
+                        push @$ret, $valueValue;
+                    }
+                } else {
+                    push @$ret, $arg;
                 }
             }
         }
