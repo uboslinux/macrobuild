@@ -9,12 +9,12 @@ tasks like that. They aren't so great at pulling together larger
 assemblies of things, such as a collection of executables or packages
 on a disk (each of which could be created through a "micro" build).
 
-macrobuild was created for the Indie Box build and release process,
+macrobuild was created for the UBOS build and release process,
 where we pull together and test a large number of packages. Each of which
 is typically built with ant, make, makepkg and/or other tools, as
 macrobuild does not even attempt to address "micro" build requirements.
 
-macrobuild is independent of Indie Box can certainly be used for many other
+macrobuild is independent of UBOS and can certainly be used for many other
 purposes as well.
 
 Contributions are welcome.
@@ -46,7 +46,7 @@ the Perl class Task.pm and implementing an overridden `run` method.
 
 # How to run
 
-On Arch Linux or an Indie Box:
+On Arch Linux or a derivative:
 ```
 makepkg -c -f
 pacman -U macrobuild*xz
@@ -56,6 +56,4 @@ On all other operating systems, clone this repository, and run with
 ```
 perl -I vendor_perl bin/macrobuild <taskname>
 ```
-
-Questions? Post to indie-box-dev@googlegroups.com.
 

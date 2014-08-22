@@ -1,14 +1,13 @@
+developer="http://indiecomputing.com/"
+url="http://ubos.net/"
+maintainer=$developer
 pkgname=macrobuild
-pkgver=0.9
+pkgver=0.10
 pkgrel=1
 pkgdesc="Testing and release framework"
 arch=('any')
-url="http://ubos.indiebox.net/"
 license=('GPL')
-groups=()
 depends=('perl')
-backup=()
-source=()
 options=('!strip')
 
 package() {
