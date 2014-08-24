@@ -65,7 +65,9 @@ sub run {
 
     if( $continue ) {
         my $outData = {};
-        while( my( $taskName, $task ) = each %{$self->{parallelTasks}} ) {
+        foreach my $taskName ( sort keys %{$self->{parallelTasks}} ) { # make this a predictable sequence
+			my $task = $self->{parallelTasks}->{$taskName};
+
             my $childRun = $run->createChildRun( $self->{splitParallelTaskInputs} ? $nextIn->{$taskName} : $nextIn );
 
             my $taskRet = $task->run( $childRun );
