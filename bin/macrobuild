@@ -23,7 +23,6 @@ use strict;
 use warnings;
 
 use UBOS::Logging;
-use Macrobuild::Logging;
 use Macrobuild::Settings;
 use Macrobuild::TaskRun;
 
