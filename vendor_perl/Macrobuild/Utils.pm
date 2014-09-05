@@ -23,7 +23,7 @@ use warnings;
 
 package Macrobuild::Utils;
 
-use Macrobuild::Logging;
+use UBOS::Logging;
 
 ##
 # Convenience method to ensure certain directories exist before or during a build.

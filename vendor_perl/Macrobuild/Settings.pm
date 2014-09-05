@@ -23,7 +23,7 @@ use warnings;
 
 package Macrobuild::Settings;
 
-use Macrobuild::Logging;
+use UBOS::Logging;
 
 use fields qw( name vars );
 

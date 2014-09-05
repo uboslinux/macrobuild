@@ -27,7 +27,7 @@ package Macrobuild::CompositeTasks::SplitJoin;
 use base qw( Macrobuild::Task );
 use fields qw( splitTask splitParallelTaskInputs parallelTasks joinTask );
 
-use Macrobuild::Logging;
+use UBOS::Logging;
 
 ##
 # Run this task.

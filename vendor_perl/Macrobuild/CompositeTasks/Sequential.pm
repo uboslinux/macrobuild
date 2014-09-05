@@ -26,7 +26,7 @@ package Macrobuild::CompositeTasks::Sequential;
 use base qw( Macrobuild::Task );
 use fields qw( tasks );
 
-use Macrobuild::Logging;
+use UBOS::Logging;
 
 ##
 # Run this task.

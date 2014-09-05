@@ -22,6 +22,7 @@
 use strict;
 use warnings;
 
+use UBOS::Logging;
 use Macrobuild::Logging;
 use Macrobuild::Settings;
 use Macrobuild::TaskRun;
@@ -40,7 +41,7 @@ for( my $i=0 ; $i<=$#ARGV ; ++$i ) {
         $verbose += 1;
     } elsif( $ARGV[$i] eq '-h' || $ARGV[$i] eq '--help' ) {
         $help = 1;
-    } elsif( $ARGV[$i] eq '-l' || $ARGV[$i] eq '--logconf' ) {
+    } elsif( $ARGV[$i] eq '-l' || $ARGV[$i] eq '--logConfFile' ) {
         ++$i;
         if( $i<= $#ARGV ) {
             $logconf = $ARGV[$i];
@@ -60,12 +61,6 @@ for( my $i=0 ; $i<=$#ARGV ; ++$i ) {
        push @taskNames, $ARGV[$i];
     }
 }
-if( $logconf ) {
-    Macrobuild::Logging::setLog4PerlConf( $logconf );
-}
-if( $verbose ) {
-    Macrobuild::Logging::setVerbose( $verbose );
-}
 
 if( $help ) {
     synopsisHelpQuit( 1 );
@@ -78,6 +73,7 @@ my $settings = new Macrobuild::Settings( 'default', $vars );
 
 my @tasks = ();
 foreach my $taskName ( @taskNames ) {
+
     if( $taskName =~ m!::! ) {
         # Perl package name has been given as a task name
         eval "require $taskName" || fatal( 'Cannot load package', "$taskName\n", $@ );
@@ -96,6 +92,8 @@ foreach my $taskName ( @taskNames ) {
         fatal( "Cannot find or run task $taskName" );
     }
 
+    UBOS::Logging::initialize( 'macrobuild', $taskName, $verbose, $logconf );
+
     my $run = new Macrobuild::TaskRun( $settings, undef, $interactive );
 
     debug( "About to run", ref( $t ));
@@ -105,8 +103,6 @@ foreach my $taskName ( @taskNames ) {
         error( "Aborting with error" );
         exit( $ret );
     }
-
-    # print "Task run is over: " . $run->resultsAsString() . "\n";
 }
 
 exit 0;
@@ -123,7 +119,7 @@ END
     } else {
         print "Synopsis:\n";
     }
-    print "    $0 [ --verbose ][ --logconf <log4perlconf> ][ --<key> <value> ]... <taskname> ...\n";
+    print "    $0 [ --verbose ][ --logConfFile <log4perlconf> ][ --<key> <value> ]... <taskname> ...\n";
     if( $long ) {
         print <<END;
         Run the named build tasks. Optionally, specify parameters as key-value pairs that will be

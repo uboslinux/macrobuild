@@ -26,8 +26,6 @@ package Macrobuild::BasicTasks::Report;
 use base qw( Macrobuild::Task );
 use fields qw( fields );
 
-use Macrobuild::Logging;
-
 ##
 # Run this task.
 # $run: the inputs, outputs, settings and possible other context info for the run
@@ -87,7 +85,6 @@ sub _report {
             }
         }
     }
-
 }
 
 1;

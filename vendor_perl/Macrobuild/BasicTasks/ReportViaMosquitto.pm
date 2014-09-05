@@ -26,8 +26,6 @@ package Macrobuild::BasicTasks::ReportViaMosquitto;
 use base qw( Macrobuild::Task );
 use fields qw( fieldsChannels );
 
-use Macrobuild::Logging;
-
 ##
 # Run this task.
 # $run: the inputs, outputs, settings and possible other context info for the run
@@ -108,7 +106,6 @@ sub _report {
             }
         }
     }
-
 }
 
 1;

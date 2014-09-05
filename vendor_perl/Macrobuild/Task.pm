@@ -25,7 +25,7 @@ package Macrobuild::Task;
 
 use fields qw( name stopOnError );
 
-use Macrobuild::Logging;
+use UBOS::Logging;
 
 ##
 # Constructor

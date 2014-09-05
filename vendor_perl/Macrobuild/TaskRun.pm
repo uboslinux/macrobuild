@@ -34,7 +34,7 @@ package Macrobuild::TaskRun;
 use fields qw( settings interactive steps );
 
 use Macrobuild::TaskRunStep;
-use Macrobuild::Logging;
+use UBOS::Logging;
 
 ##
 # Constructor
@@ -214,11 +214,9 @@ sub resultsAsString {
         my $t = $s->{task};
         if( $t ) {
             $ret .= "\n${is}Step #$i: " . $t->name;
-#            $ret .= "\n${is}  in: " . _resultsAsString( $s->{in}, $indent+1 );
             foreach my $subRun ( @{$s->{subRuns}} ) {
                 $ret .= "\n${is}  sub-runs: " . $subRun->resultsAsString( $indent+1 );
             }
-#            $ret .= "\n${is}  out: " . _resultsAsString( $s->{out}, $indent+1 );
 
         } elsif( $i != @{$self->{steps}} -1 ) {
             error( "No task set in step $i of " . @{$self->{steps}} );

@@ -26,7 +26,7 @@ package Macrobuild::CompositeTasks::MergeValuesTask;
 use base qw( Macrobuild::Task );
 use fields qw( keys );
 
-use Macrobuild::Logging;
+use UBOS::Logging;
 
 ##
 # Run this task.

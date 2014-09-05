@@ -26,7 +26,7 @@ package Macrobuild::BasicTasks::Fail;
 use base qw( Macrobuild::Task );
 use fields;
 
-use Macrobuild::Logging;
+use UBOS::Logging;
 
 ##
 # Run this task.

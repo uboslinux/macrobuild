@@ -26,8 +26,6 @@ package Macrobuild::BasicTasks::Hello;
 use base qw( Macrobuild::Task );
 use fields;
 
-use Macrobuild::Logging;
-
 ##
 # Run this task.
 # $run: the inputs, outputs, settings and possible other context info for the run

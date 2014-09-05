@@ -27,7 +27,7 @@ package Macrobuild::CompositeTasks::Delegating;
 use base qw( Macrobuild::Task );
 use fields qw( delegate );
 
-use Macrobuild::Logging;
+use UBOS::Logging;
 
 ##
 # Run this task.
