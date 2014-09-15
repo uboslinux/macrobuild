@@ -47,7 +47,7 @@ sub run {
             if( $taskRet < 0 ) {
                 $ret = $taskRet;
                 if( $self->{stopOnError} ) {
-                    error( "ERROR when executing " . $task->name() . ". Stopping." );
+                    error( "ERROR when executing " . $run->replaceVariables( $task->name()) . ". Stopping." );
                     last;
                 }
             } else { # >0
