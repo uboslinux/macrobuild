@@ -31,7 +31,7 @@ use warnings;
 
 package Macrobuild::TaskRun;
 
-use fields qw( settings interactive steps );
+use fields qw( settings interactive steps parent );
 
 use Macrobuild::TaskRunStep;
 use UBOS::Logging;
@@ -41,11 +41,13 @@ use UBOS::Logging;
 # $settings: the settings
 # $in: the input values, if any
 # $interactive: if 1, wait for user input at the end of each task
+# $parent: the parent TaskRun, if any
 sub new {
     my $self        = shift;
     my $settings    = shift;
     my $in          = shift;
     my $interactive = shift;
+    my $parent      = shift;
 
     unless( ref $self ) {
         $self = fields::new( $self );
@@ -55,6 +57,7 @@ sub new {
     $self->{steps} = [
             new Macrobuild::TaskRunStep( $in )
     ];
+    $self->{parent} = $parent;
 
     return $self;
 }
@@ -72,7 +75,7 @@ sub createChildRun {
         my $lastElement = $self->{steps}->[-1];
         
         if( $lastElement->{status} == 1 ) {
-            $ret = new Macrobuild::TaskRun( $self->{settings}, $in, $self->{interactive} );
+            $ret = new Macrobuild::TaskRun( $self->{settings}, $in, $self->{interactive}, $self );
 
             push @{$lastElement->{subRuns}}, $ret;
             
@@ -107,6 +110,31 @@ sub getSteps {
 }
 
 ##
+# Obtain the parent, if any
+# return: the parent
+sub getParent {
+    my $self = shift;
+
+    return $self->{parent};
+}
+
+##
+# Obtain the entire hierarchy of parents
+# return: the parents
+sub parentStack {
+    my $self = shift;
+
+    my @ret;
+    if( defined( $self->{parent} )) {
+        @ret = $self->{parent}->parentStack();
+    } else {
+        @ ret = ();
+    }
+    push @ret, $self->{settings}->replaceVariables(  $self->{steps}->[-1]->{task}->name() );
+    return @ret;
+}
+
+##
 # Indicate a new task is starting
 # $task: the task that is starting
 # return: input values for this task
@@ -120,8 +148,17 @@ sub taskStarting {
             $lastElement->{status} = 1;
             $lastElement->{task}   = $task;
 
-            info( 'Starting task', sub { $self->{settings}->replaceVariables( $task->name ) } );
-            debug( 'Task input:',  sub { _resultsAsString( $lastElement->{in} ) }  );
+            if( $self->{interactive} ) {
+                print "** Starting task \"" . $self->{settings}->replaceVariables( $task->name() ) . "\". Hit return to continue.\n";
+                debug( "Task stack:", sub { "\n    " . join( "\n    ", $self->parentStack() ) } );
+                debug( 'Task input:', sub { _resultsAsString( $lastElement->{in} ) } );
+                
+                getc();
+
+            } else {
+                info( 'Starting task', sub { $self->{settings}->replaceVariables( $task->name ) } );
+                debug( 'Task input:',  sub { _resultsAsString( $lastElement->{in} ) }  );
+            }
 
             return $lastElement->{in};
             
@@ -150,7 +187,7 @@ sub taskEnded {
     debug( 'Task output:', sub { _resultsAsString( $output ) }  );
 
     if( $self->{interactive} ) {
-        print "Task ended. Hit return to continue.\n";
+        print "** End of task \"" . $self->{settings}->replaceVariables( $task->name() ) . "\". Hit return to continue.\n";
         getc();
     }
 
