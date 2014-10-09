@@ -42,7 +42,9 @@ sub run {
 
     if( %$report ) {
         print $run->replaceVariables( $self->{name} ) . ":\n";
-        while( my( $name, $value ) = each %$report ) {
+        foreach my $name ( sort keys %$report ) {
+            my $value = $report->{$name};
+
             if( ref( $value ) eq 'ARRAY' ) {
                 print "$name: " . join( ' ', @$value );
                 print "\n";

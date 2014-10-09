@@ -79,7 +79,9 @@ sub _merge {
         foreach my $arg ( @arguments ) {
             if( defined( $arg )) {
                 if( ref( $arg ) eq 'HASH' ) {
-                    while( my( $valueKey, $valueValue ) = each %$arg ) {
+                    foreach my $valueKey ( keys %$arg ) {
+                        my $valueValue = $arg->{$valueKey};
+
                         if( exists( $ret->{$valueKey} )) {
                             $ret->{$valueKey} = _merge( $ret->{$valueKey}, $valueValue );
                         } else {

@@ -46,7 +46,9 @@ sub run {
         }
     }
     if( %$report ) {
-        while( my( $name, $value ) = each %$report ) {
+        foreach my $name ( sort keys %$report ) {
+            my $value = $report->{$name};
+
             my $channel = $self->{fieldsChannels}->{$name};
             if( $channel ) {
                 $channel = $run->replaceVariables( $channel, 1 );
