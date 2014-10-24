@@ -89,7 +89,7 @@ sub replaceVariables {
         if( $undefIfUndef ) {
             $ret = undef;
         } else {
-            fatal( 'Unknown variable in string', $ret, ', was', $s );
+            fatal( 'Unknown variable in string: ', $ret );
         }
     }
     return $ret;

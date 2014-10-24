@@ -135,6 +135,19 @@ sub parentStack {
 }
 
 ##
+# Determine how many generations of parents this TaskRun has
+# return: 0, or more
+sub parentGenerations {
+    my $self = shift;
+
+    if( defined( $self->{parent} )) {
+        return $self->{parent}->parentGenerations() + 1;
+    } else {
+        return 0;
+    }
+}
+
+##
 # Indicate a new task is starting
 # $task: the task that is starting
 # return: input values for this task
@@ -148,15 +161,23 @@ sub taskStarting {
             $lastElement->{status} = 1;
             $lastElement->{task}   = $task;
 
+            my $taskName;
+            if( $task->name ) {
+                $taskName = $self->{settings}->replaceVariables( $task->name ) . ' (' . $task->type() . ')';
+            } else {
+                $taskName = $task->type();
+            }
+            my $indent   = '  ' x $self->parentGenerations();
+
             if( $self->{interactive} ) {
-                print "** Starting task \"" . $self->{settings}->replaceVariables( $task->name() ) . "\". Hit return to continue.\n";
+                print "** Starting task: $indent\"$taskName\". Hit return to continue.\n";
                 debug( "Task stack:", sub { "\n    " . join( "\n    ", $self->parentStack() ) } );
                 debug( 'Task input:', sub { _resultsAsString( $lastElement->{in} ) } );
                 
                 getc();
 
             } else {
-                info( 'Starting task', sub { $self->{settings}->replaceVariables( $task->name ) } );
+                info( 'Starting task:', "$indent$taskName" );
                 debug( 'Task input:',  sub { _resultsAsString( $lastElement->{in} ) }  );
             }
 
