@@ -128,9 +128,14 @@ sub parentStack {
     if( defined( $self->{parent} )) {
         @ret = $self->{parent}->parentStack();
     } else {
-        @ ret = ();
+        @ret = ();
     }
-    push @ret, $self->{settings}->replaceVariables(  $self->{steps}->[-1]->{task}->name() );
+    my $t = $self->{steps}->[-1]->{task};
+    if( $t->name ) {
+        push @ret, $self->{settings}->replaceVariables( $t->name ) . ' (' . $t->type() . ')';
+    } else {
+        push @ret, $t->type();
+    }
     return @ret;
 }
 
@@ -208,7 +213,14 @@ sub taskEnded {
     debug( 'Task output:', sub { _resultsAsString( $output ) }  );
 
     if( $self->{interactive} ) {
-        print "** End of task \"" . $self->{settings}->replaceVariables( $task->name() ) . "\". Hit return to continue.\n";
+        my $taskName;
+        if( $task->name ) {
+            $taskName = $self->{settings}->replaceVariables( $task->name ) . ' (' . $task->type() . ')';
+        } else {
+            $taskName = $task->type();
+        }
+
+        print "** End of task \"$taskName\". Hit return to continue.\n";
         getc();
     }
 
