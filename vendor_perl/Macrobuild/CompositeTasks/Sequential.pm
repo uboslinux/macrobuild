@@ -57,7 +57,7 @@ sub run {
             }
         }
     }
-    $run->taskEnded( $self, $childRun->getOutput() );
+    $run->taskEnded( $self, $childRun->getOutput(), $ret );
 
     return $ret;
 }    

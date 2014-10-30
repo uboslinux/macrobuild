@@ -205,12 +205,14 @@ sub taskStarting {
 # Indicate a task has completed
 # $task: the task that has completed
 # $output: the output of the task that has completed
+# $status: the return value of the run
 sub taskEnded {
     my $self   = shift;
     my $task   = shift;
     my $output = shift;
+    my $status = shift;
 
-    debug( 'Task output:', sub { _resultsAsString( $output ) }  );
+    debug( 'Task ended with status:', defined( $status ) ? $status : '<unknown>', 'and output:', sub { _resultsAsString( $output ) } );
 
     if( $self->{interactive} ) {
         my $taskName;

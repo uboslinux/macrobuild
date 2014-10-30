@@ -38,7 +38,14 @@ sub run {
     my $report = {};
     $self->_report( $run, $report );
 
-    $run->taskEnded( $self, {} );
+    my $ret;
+    if( %report ) {
+        $ret = 0;
+    } else {
+        $ret = 1;
+    }
+
+    $run->taskEnded( $self, {}, $ret );
 
     if( %$report ) {
         print $run->replaceVariables( $self->{name} ) . ":\n";
@@ -54,11 +61,8 @@ sub run {
                 print "$name: $value\n";
             }
         }
-        
-        return 0;
-    } else {
-        return 1;
     }
+    return $ret;
 }
 
 ##

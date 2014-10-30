@@ -52,7 +52,7 @@ sub run {
         $out = {};
     }
 
-    $run->taskEnded( $self, $out );
+    $run->taskEnded( $self, $out, $ret );
 
     return $ret;
 }

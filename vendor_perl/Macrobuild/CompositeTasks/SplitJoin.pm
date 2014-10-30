@@ -115,7 +115,7 @@ sub run {
         }
     }
 
-    $run->taskEnded( $self, $nextIn );
+    $run->taskEnded( $self, $nextIn, $ret );
 
     return $ret;
 }

@@ -39,7 +39,7 @@ sub run {
 
     error( "Task " . ref( $self ) . ": indeed, let's fail" );
     
-    $run->taskEnded( $self, {} );
+    $run->taskEnded( $self, {}, -1 );
 
     return -1;
 }

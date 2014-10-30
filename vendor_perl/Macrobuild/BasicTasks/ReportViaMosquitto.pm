@@ -59,11 +59,11 @@ sub run {
         }
     }
 
-    $run->taskEnded( $self, $report );
-
     if( %$report ) {
+        $run->taskEnded( $self, $report, 0 );
         return 0;
     } else {
+        $run->taskEnded( $self, $report, 1 );
         return 1;
     }
 }

@@ -41,11 +41,11 @@ sub run {
 
     my $out = _merge( map { $in->{$_} } @$keys );
 
-    $run->taskEnded( $self, $out );
-
     if( defined( $out ) && $out == -1 ) {
+        $run->taskEnded( $self, $out, -1 );
         return -1;
     } else {
+        $run->taskEnded( $self, $out, 0 );
         return 0;
     }
 }

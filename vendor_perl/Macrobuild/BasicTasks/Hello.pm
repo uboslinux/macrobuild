@@ -37,7 +37,7 @@ sub run {
 
     print "Hello! You called?\n";
 
-    $run->taskEnded( $self, {} );
+    $run->taskEnded( $self, {}, 0 );
 
     return 0;
 }    
