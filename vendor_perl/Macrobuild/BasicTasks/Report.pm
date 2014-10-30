@@ -38,15 +38,7 @@ sub run {
     my $report = {};
     $self->_report( $run, $report );
 
-    my $ret;
-    if( %report ) {
-        $ret = 0;
-    } else {
-        $ret = 1;
-    }
-
-    $run->taskEnded( $self, {}, $ret );
-
+    my $ret = 1;
     if( %$report ) {
         print $run->replaceVariables( $self->{name} ) . ":\n";
         foreach my $name ( sort keys %$report ) {
@@ -61,7 +53,11 @@ sub run {
                 print "$name: $value\n";
             }
         }
+        $ret = 0;
     }
+
+    $run->taskEnded( $self, {}, $ret );
+
     return $ret;
 }
 
