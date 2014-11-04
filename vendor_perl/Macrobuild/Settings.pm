@@ -75,15 +75,17 @@ sub getVariable {
 # the syntax '${xxx}' where 'xxx' is the variable name. If '$' is
 # preceded by a backslash, this occurrence is skipped.
 # $s: the string containing the variables
+# $additional: an optional hash with additional variable settings
 # $undefIfUndef: return undef if not all variables could be replaced
 # return: the string with variables returned, or undef
 sub replaceVariables {
     my $self         = shift;
     my $s            = shift;
+    my $additional   = shift || {};
     my $undefIfUndef = shift;
 
     my $ret = $s;
-    $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getVariable( $1, '${? ' . $1 . '}' )/ge;
+    $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getVariable( $1, $additional->{$1} || '${? ' . $1 . '}' )/ge;
 
     if( $ret =~ m!\$\{\?.*\}! ) {
         if( $undefIfUndef ) {

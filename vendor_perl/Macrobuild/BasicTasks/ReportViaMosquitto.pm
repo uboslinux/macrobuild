@@ -40,7 +40,7 @@ sub run {
 
     my $runChannel = $self->{fieldsChannels}->{''};
     if( $runChannel ) {
-        $runChannel = $run->replaceVariables( $runChannel, 1 );
+        $runChannel = $run->replaceVariables( $runChannel, undef, 1 );
         if( $runChannel ) {
             system( "mosquitto_pub -t '$runChannel' -m 'ran'" );
         }
@@ -51,7 +51,7 @@ sub run {
 
             my $channel = $self->{fieldsChannels}->{$name};
             if( $channel ) {
-                $channel = $run->replaceVariables( $channel, 1 );
+                $channel = $run->replaceVariables( $channel, undef, 1 );
                 if( $channel ) {
                     system( "mosquitto_pub -t '$channel' -m '$value'" );
                 }

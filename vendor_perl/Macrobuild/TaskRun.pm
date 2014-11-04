@@ -342,14 +342,16 @@ sub getVariable {
 ##
 # Replace all variables in a string from the settings.
 # $s: the string containing the variables
+# $additional: an optional hash with additional variable settings
 # $undefIfUndef: return undef if not all variables could be replaced
 # return: the string with variables returned, or undef
 sub replaceVariables {
     my $self         = shift;
     my $s            = shift;
+    my $additional   = shift;
     my $undefIfUndef = shift;
 
-    return $self->{settings}->replaceVariables( $s, $undefIfUndef );
+    return $self->{settings}->replaceVariables( $s, $additional, $undefIfUndef );
 }
 
 1;
