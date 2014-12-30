@@ -84,6 +84,11 @@ sub replaceVariables {
     my $additional   = shift || {};
     my $undefIfUndef = shift;
 
+    unless( defined( $s )) {
+        error( 'Cannot replace variables in undef' );
+        return undef;
+    }
+
     my $ret = $s;
     $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getVariable( $1, $additional->{$1} || '${? ' . $1 . '}' )/ge;
 
