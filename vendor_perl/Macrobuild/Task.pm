@@ -36,8 +36,8 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    $self->{name}        = undef; # can be overridden
-    $self->{stopOnError} = 1;     # can be overridden
+    $self->{name}        = 'unnamed ' . ref( $self ); # can be overridden
+    $self->{stopOnError} = 1;                         # can be overridden
 
     for( my $i=0; $i<@args ; $i += 2 ) {
         $self->{$args[$i]} = $args[$i+1];
