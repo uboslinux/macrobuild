@@ -52,7 +52,15 @@ for( my $i=0 ; $i<=$#ARGV ; ++$i ) {
         my $name = $1;
         ++$i;
         if( $i<= $#ARGV ) {
-            $vars->{$name} = $ARGV[$i];
+            if( exists( $vars->{$name} )) {
+                if( ref( $vars->{$name} ) eq 'ARRAY' ) {
+                    push @{$vars->{$name}}, $ARGV[$i];
+                } else {
+                    $vars->{$name} = [ $vars->{$name}, $ARGV[$i] ];
+                }
+            } else {
+                $vars->{$name} = $ARGV[$i];
+            }
         } else {
             synopsisHelpQuit();
         }
