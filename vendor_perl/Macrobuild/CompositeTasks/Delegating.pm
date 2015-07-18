@@ -30,6 +30,23 @@ use fields qw( delegate );
 use UBOS::Logging;
 
 ##
+# Constructor
+sub new {
+    my $self = shift;
+    my @args = @_;
+
+    unless( ref $self ) {
+        $self = fields::new( $self );
+    }
+
+    $self->{showInLog} = 0;
+    
+    $self->SUPER::new( @args );
+    
+    return $self;
+}
+
+##
 # Run this task.
 # $run: the inputs, outputs, settings and possible other context info for the run
 sub run {
@@ -47,7 +64,7 @@ sub run {
         $out = $childRun->getOutput();
         
     } else {
-        error( "No delegate defined for Delegating task", $self->name );
+        error( "No delegate defined for delegating task", $self->name );
         $ret = -1;
         $out = {};
     }

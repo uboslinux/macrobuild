@@ -86,6 +86,9 @@ sub replaceVariables {
 
     unless( defined( $s )) {
         error( 'Cannot replace variables in undef' );
+        use Carp;
+        print carp( 'stack trace' );
+        
         return undef;
     }
 

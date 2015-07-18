@@ -166,26 +166,27 @@ sub taskStarting {
             $lastElement->{status} = 1;
             $lastElement->{task}   = $task;
 
-            my $taskName;
-            if( $task->name ) {
-                $taskName = $self->{settings}->replaceVariables( $task->name ) . ' (' . $task->type() . ')';
-            } else {
-                $taskName = $task->type();
+            if( $task->showInLog() ) {
+                my $taskName;
+                if( $task->name ) {
+                    $taskName = $self->{settings}->replaceVariables( $task->name ) . ' (' . $task->type() . ')';
+                } else {
+                    $taskName = $task->type();
+                }
+                my $indent = '  ' x $self->parentGenerations();
+
+                if( $self->{interactive} ) {
+                    print "** Starting task: $indent\"$taskName\". Hit return to continue.\n";
+                    debug( "Task stack:", sub { "\n    " . join( "\n    ", $self->parentStack() ) } );
+                    debug( 'Task input:', sub { _resultsAsString( $lastElement->{in} ) } );
+                    
+                    getc();
+
+                } else {
+                    info( 'Starting task:', "$indent$taskName" );
+                    debug( 'Task input:',  sub { _resultsAsString( $lastElement->{in} ) }  );
+                }
             }
-            my $indent   = '  ' x $self->parentGenerations();
-
-            if( $self->{interactive} ) {
-                print "** Starting task: $indent\"$taskName\". Hit return to continue.\n";
-                debug( "Task stack:", sub { "\n    " . join( "\n    ", $self->parentStack() ) } );
-                debug( 'Task input:', sub { _resultsAsString( $lastElement->{in} ) } );
-                
-                getc();
-
-            } else {
-                info( 'Starting task:', "$indent$taskName" );
-                debug( 'Task input:',  sub { _resultsAsString( $lastElement->{in} ) }  );
-            }
-
             return $lastElement->{in};
             
         } elsif( $lastElement->{status} == 1 ) {
@@ -214,16 +215,18 @@ sub taskEnded {
 
     debug( 'Task ended with status:', defined( $status ) ? $status : '<unknown>', 'and output:', sub { _resultsAsString( $output ) } );
 
-    if( $self->{interactive} ) {
-        my $taskName;
-        if( $task->name ) {
-            $taskName = $self->{settings}->replaceVariables( $task->name ) . ' (' . $task->type() . ')';
-        } else {
-            $taskName = $task->type();
-        }
+    if( $task->showInLog() ) {
+        if( $self->{interactive} ) {
+            my $taskName;
+            if( $task->name ) {
+                $taskName = $self->{settings}->replaceVariables( $task->name ) . ' (' . $task->type() . ')';
+            } else {
+                $taskName = $task->type();
+            }
 
-        print "** End of task \"$taskName\". Hit return to continue.\n";
-        getc();
+            print "** End of task \"$taskName\". Hit return to continue.\n";
+            getc();
+        }
     }
 
     if( @{$self->{steps}} ) {

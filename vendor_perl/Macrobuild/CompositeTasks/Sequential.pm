@@ -29,6 +29,23 @@ use fields qw( tasks );
 use UBOS::Logging;
 
 ##
+# Constructor
+sub new {
+    my $self = shift;
+    my @args = @_;
+
+    unless( ref $self ) {
+        $self = fields::new( $self );
+    }
+
+    $self->{showInLog} = 0;
+    
+    $self->SUPER::new( @args );
+    
+    return $self;
+}
+
+##
 # Run this task.
 # $run: the inputs, outputs, settings and possible other context info for the run
 sub run {

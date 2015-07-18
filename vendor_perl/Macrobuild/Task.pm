@@ -23,7 +23,7 @@ use warnings;
 
 package Macrobuild::Task;
 
-use fields qw( name stopOnError );
+use fields qw( name stopOnError showInLog );
 
 use UBOS::Logging;
 
@@ -36,10 +36,11 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    $self->{name}        = 'unnamed ' . ref( $self ); # can be overridden
-    $self->{stopOnError} = 1;                         # can be overridden
+    $self->{name}        = ref( $self ); # can be overridden
+    $self->{stopOnError} = 1;            # can be overridden
+    $self->{showInLog}   = 1;            # can be overridden
 
-    for( my $i=0; $i<@args ; $i += 2 ) {
+    for( my $i=0; $i<@args ; $i+=2 ) {
         $self->{$args[$i]} = $args[$i+1];
     }
     return $self;
@@ -59,6 +60,14 @@ sub type {
     my $self = shift;
 
     return ref( $self );
+}
+
+##
+# If true, show this task in a log
+sub showInLog {
+    my $self = shift;
+    
+    return $self->{showInLog};
 }
 
 ##

@@ -29,6 +29,23 @@ use fields qw( keys );
 use UBOS::Logging;
 
 ##
+# Constructor
+sub new {
+    my $self = shift;
+    my @args = @_;
+
+    unless( ref $self ) {
+        $self = fields::new( $self );
+    }
+
+    $self->{showInLog} = 0;
+    
+    $self->SUPER::new( @args );
+    
+    return $self;
+}
+
+##
 # Run this task.
 # $run: the inputs, outputs, settings and possible other context info for the run
 sub run {
@@ -73,7 +90,7 @@ sub _merge {
     if( !defined( $type )) {
         # No input, nothing to do
 
-    } elsif( $type eq "HASH" ) {
+    } elsif( $type eq 'HASH' ) {
         $ret = {};
 
         foreach my $arg ( @arguments ) {
@@ -94,7 +111,7 @@ sub _merge {
             }
         }
         
-    } elsif( $type eq "ARRAY" ) {
+    } elsif( $type eq 'ARRAY' ) {
         $ret = [];
 
         foreach my $arg ( @arguments ) {
