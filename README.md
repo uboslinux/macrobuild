@@ -48,7 +48,7 @@ the Perl class Task.pm and implementing an overridden `run` method.
 
 On Arch Linux or a derivative:
 ```
-makepkg -c -f
+makepkg
 pacman -U macrobuild*xz
 macrobuild <taskname>
 ```

@@ -23,7 +23,7 @@ use warnings;
 
 package Macrobuild::Task;
 
-use fields qw( name stopOnError showInLog );
+use fields qw( name stopOnError showInLog _settings );
 
 use UBOS::Logging;
 
@@ -68,16 +68,6 @@ sub showInLog {
     my $self = shift;
     
     return $self->{showInLog};
-}
-
-##
-# Get a named parameter
-# $parName: name of the parameter
-sub parameter {
-    my $self    = shift;
-    my $parName = shift;
-
-    return ( defined( $self->{pars} ) && $self->{pars}->{$parName} ) || undef;
 }
 
 ##

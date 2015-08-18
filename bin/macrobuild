@@ -3,7 +3,7 @@
 # Build something.
 #
 # This file is part of macrobuild.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2015 Indie Computing Corp.
 #
 # macrobuild is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -53,13 +53,9 @@ for( my $i=0 ; $i<=$#ARGV ; ++$i ) {
         ++$i;
         if( $i<= $#ARGV ) {
             if( exists( $vars->{$name} )) {
-                if( ref( $vars->{$name} ) eq 'ARRAY' ) {
-                    push @{$vars->{$name}}, $ARGV[$i];
-                } else {
-                    $vars->{$name} = [ $vars->{$name}, $ARGV[$i] ];
-                }
+                push @{$vars->{$name}}, $ARGV[$i];
             } else {
-                $vars->{$name} = $ARGV[$i];
+                $vars->{$name} = [ $ARGV[$i] ];
             }
         } else {
             synopsisHelpQuit();
@@ -77,6 +73,7 @@ if( !@taskNames ) {
 }
 
 my $settings = new Macrobuild::Settings( 'default', $vars );
+$settings->addDefaultSettingsFrom( 'local.pl', 'settings.pl' );
 
 my @tasks = ();
 foreach my $taskName ( @taskNames ) {
@@ -94,7 +91,7 @@ foreach my $taskName ( @taskNames ) {
         eval "require '$fileName';" || fatal( 'Cannot read file', "$fileName\n", $@ );
         $taskName =~ s!/!::!g;
     }
-    my $t = $taskName->new;
+    my $t = $taskName->new( '_settings' => $settings );
     unless( $t ) {
         fatal( "Cannot find or run task $taskName" );
     }

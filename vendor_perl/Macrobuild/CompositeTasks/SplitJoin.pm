@@ -33,7 +33,7 @@ use UBOS::Logging;
 # Constructor
 sub new {
     my $self = shift;
-    my @args = @_;
+    my %args = @_;
 
     unless( ref $self ) {
         $self = fields::new( $self );
@@ -41,7 +41,7 @@ sub new {
 
     $self->{showInLog} = 0;
     
-    $self->SUPER::new( @args );
+    $self->SUPER::new( %args );
     
     return $self;
 }
@@ -136,18 +136,5 @@ sub run {
 
     return $ret;
 }
-
-##
-# Set the settings object
-sub setSettings {
-    my $self        = shift;
-    my $newSettings = shift;
-
-    foreach my $t ( values %{$self->{parallelTasks}}, $self->{splitTask}, $self->{joinTask} ) {
-        if( $t ) {
-            $t->setSettings( $newSettings );
-        }
-    }
-}    
 
 1;

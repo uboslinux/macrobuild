@@ -32,7 +32,7 @@ use UBOS::Logging;
 # Constructor
 sub new {
     my $self = shift;
-    my @args = @_;
+    my %args = @_;
 
     unless( ref $self ) {
         $self = fields::new( $self );
@@ -40,7 +40,7 @@ sub new {
 
     $self->{showInLog} = 0;
     
-    $self->SUPER::new( @args );
+    $self->SUPER::new( %args );
     
     return $self;
 }

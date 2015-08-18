@@ -2,7 +2,7 @@
 # Settings for the Build
 #
 # This file is part of macrobuild.
-# (C) 2014 Indie Computing Corp.
+# (C) 2014-2015 Indie Computing Corp.
 #
 # macrobuild is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,28 +25,50 @@ package Macrobuild::Settings;
 
 use UBOS::Logging;
 
-use fields qw( name vars );
+use fields qw( name vars delegate );
 
 ##
 # Constructor
 # $name: name of the settings object, in case there is more than one
 # $vars: variables available to the tasks
+# $delegate: a delegate Settings objects to consult if a value was not available locally
 sub new {
     my $self = shift;
     my $name = shift;
     my $vars = shift;
+    my $delegate = shift;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
 
-    $self->{name} = $name;
-    $self->{vars} = $vars;
+    $self->{name}     = $name;
+    $self->{vars}     = $vars;
+    $self->{delegate} = $delegate;
 
     my ( $sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst ) = gmtime( time() );
     $self->{vars}->{tstamp} = sprintf "%.4d%.2d%.2d-%.2d%.2d%.2d", ($year+1900), ( $mon+1 ), $mday, $hour, $min, $sec;
     
     return $self;
+}
+
+##
+# Add default values by reading the following file(s)
+# @settingsFiles: the settings files. These must be Perl files, returning a hash each
+sub addDefaultSettingsFrom {
+    my $self          = shift;
+    my @settingsFiles = @_;
+
+    if( $self->{delegate} ) {
+        fatal( 'Cannot add delegate, have one already: addDefaultSettingsFrom(', @settingsFiles, ')' );
+    }
+    my $delegate = undef;
+    foreach my $fileName ( reverse @settingsFiles ) {
+        my $vars = eval "require '$fileName';" || fatal( 'Cannot read file', "$fileName\n", $@ );
+        
+        $delegate = Macrobuild::Settings->new( $fileName, $vars, $delegate );
+    }
+    $self->{delegate} = $delegate;
 }
 
 ##
@@ -59,15 +81,37 @@ sub getName {
 }
 
 ##
+# Obtain the delegate settings object, if any
+# return: the delegate
+sub getDelegate {
+    my $self = shift;
+    
+    return $self->{delegate};
+}
+
+##
 # Get a variable
 # $n: name of the variable
-# $default: value to return if variable does not exist
+# $default: value to return if otherwise undef would be returned
 sub getVariable {
     my $self    = shift;
     my $n       = shift;
     my $default = shift;
 
-    return $self->{vars}->{ $n } || $default;
+    my $ret = $self->{vars}->{$n};
+    if( $ret ) {
+        if( 'ARRAY' eq ref( $ret ) && @$ret == 1 ) {
+            return $ret->[0];
+        } else {
+            return $ret;
+        }
+    }
+    if( $self->{delegate} ) {
+        $ret = $self->{delegate}->getVariable( $n, $default );
+    } else {
+        $ret = $default;
+    }
+    return $ret;
 }
 
 ##
@@ -93,13 +137,51 @@ sub replaceVariables {
     }
 
     my $ret = $s;
-    $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getVariable( $1, $additional->{$1} || '${? ' . $1 . '}' )/ge;
+    for( my $i=0 ; $i<5 ; ++$i ) {
+        # expand up to 5 times
+        $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->_replacement( $1, $additional, $s, $undefIfUndef )/ge;
+        unless( $ret =~ m!\$\{^?! ) { # dear Perl: really! This time no \ in front of ?
+            last;
+        }
+    }
+    if( $undefIfUndef && $ret =~ m!\$\{\?! ) {
+        $ret = undef;
+    }
 
-    if( $ret =~ m!\$\{\?.*\}! ) {
+    return $ret;
+}
+
+##
+# Helper method to determine the replacement string in the replaceVariables method.
+# $matched: the matched pattern
+# $additional: an optional hash with additional variable settings
+# $s: the string containing the variables
+# $undefIfUndef: return undef if not all variables could be replaced
+# return: the replacement string
+sub _replacement {
+    my $self         = shift;
+    my $matched      = shift;
+    my $additional   = shift;
+    my $s            = shift;
+    my $undefIfUndef = shift;
+
+    my $ret = $self->getVariable( $matched );
+    # we cannot replace things that aren't strings or aren't 1-length arrays
+    if( $ret && 'ARRAY' eq ref( $ret ) && @$ret == 1 ) {
+        $ret = $ret->[0];
+    }
+    if( !$ret || ref( $ret )) {
+        $ret = $additional->{$matched};
+
+        if( $ret && 'ARRAY' eq ref( $ret ) && @$ret == 1 ) {
+            $ret = $ret->[0];
+        }
+    }
+    unless( $ret ) {
         if( $undefIfUndef ) {
-            $ret = undef;
+            $ret = '${? ' . $matched . '}'
         } else {
-            fatal( 'Unknown variable in string: ', $ret );
+            fatal( 'Unknown variable ' . $matched . ' in string:', $s );
         }
     }
     return $ret;

@@ -65,17 +65,19 @@ sub new {
 ##
 # Create a child TaskRun object for child Tasks
 # $in: the input values
+# $settings: alternate settings object, if any, for the child run
 # return: the child TaskRun
 sub createChildRun {
-    my $self = shift;
-    my $in   = shift;
+    my $self     = shift;
+    my $in       = shift;
+    my $settings = shift || $self->{settings};
 
     my $ret;
     if( @{$self->{steps}} ) {
         my $lastElement = $self->{steps}->[-1];
         
         if( $lastElement->{status} == 1 ) {
-            $ret = new Macrobuild::TaskRun( $self->{settings}, $in, $self->{interactive}, $self );
+            $ret = new Macrobuild::TaskRun( $settings, $in, $self->{interactive}, $self );
 
             push @{$lastElement->{subRuns}}, $ret;
             
@@ -213,7 +215,27 @@ sub taskEnded {
     my $output = shift;
     my $status = shift;
 
-    debug( 'Task ended with status:', defined( $status ) ? $status : '<unknown>', 'and output:', sub { _resultsAsString( $output ) } );
+    debug(  'Task ended with status:',
+            sub {
+                if( defined( $status )) {
+                    if( $status == -1 ) {
+                        return "-1 (error)";
+                    } elsif( $status == 0 ) {
+                        return "0 (success)";
+                    } elsif( $status == 1 ) {
+                        return "1 (nothing to do)";
+                    } else {
+                        return "$status (?)";
+                    }
+                        
+                } else {
+                    return '<unknown>'
+                }
+            },
+            'and output:',
+            sub {
+                _resultsAsString( $output )
+            } );
 
     if( $task->showInLog() ) {
         if( $self->{interactive} ) {
