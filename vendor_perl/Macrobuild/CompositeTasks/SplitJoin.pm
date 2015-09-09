@@ -1,9 +1,13 @@
 # 
 # A build Task that first runs a splitting task, then two or more parallel tasks,
-# and then a joining Task.
+# and then a joining Task. Optionally, we can specify a specify a sequence in
+# which the parallel tasks should be processed.
+#
+# Note: parallel here means parallel with respect to the data flow, not in
+# terms of execution
 #
 # This file is part of macrobuild.
-# (C) 2014 Indie Computing Corp.
+# (C) 2014-2015 Indie Computing Corp.
 #
 # macrobuild is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,7 +29,7 @@ use warnings;
 package Macrobuild::CompositeTasks::SplitJoin;
 
 use base qw( Macrobuild::Task );
-use fields qw( splitTask splitParallelTaskInputs parallelTasks joinTask );
+use fields qw( splitTask splitParallelTaskInputs parallelTasks parallelTasksSequence joinTask );
 
 use UBOS::Logging;
 
@@ -82,7 +86,26 @@ sub run {
 
     if( $continue ) {
         my $outData = {};
-        foreach my $taskName ( sort keys %{$self->{parallelTasks}} ) { # make this a predictable sequence
+
+        # determine, check and clean up tasks sequence
+        my %inSequence   = ();
+        my @realSequence = ();
+        if( defined( $self->{parallelTasksSequence} )) {
+            foreach my $task ( @{$self->{parallelTasksSequence}} ) {
+                if( !exists( $self->{parallelTasks}->{$task} )) {
+                    warning( 'Task', $task, 'specified in parallelTasksSequence does not exist in parallelTasks. Ignoring.' );
+                } elsif( defined( $inSequence{$task} )) {
+                    warning( 'Task', $task, 'specified more than once in parallelTasksSequence. Ignoring second occurrence.' );
+                } else {
+                    $inSequence{$task} = $task;
+                    push @realSequence, $task;
+                }
+            }
+        }
+        # put in the remaining tasks in a predictable sequence
+        map { my $t = $_; unless( exists( $inSequence{$t} )) { push @realSequence, $t; } } sort keys %{$self->{parallelTasks}};
+
+        foreach my $taskName ( @realSequence ) {
 			my $task = $self->{parallelTasks}->{$taskName};
 
             my $childRun = $run->createChildRun( $self->{splitParallelTaskInputs} ? $nextIn->{$taskName} : $nextIn );
