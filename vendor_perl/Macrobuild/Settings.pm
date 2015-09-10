@@ -53,7 +53,8 @@ sub new {
 }
 
 ##
-# Add default values by reading the following file(s)
+# Add default values by reading the following file(s). Silently skip files
+# that don't exist
 # @settingsFiles: the settings files. These must be Perl files, returning a hash each
 sub addDefaultSettingsFrom {
     my $self          = shift;
@@ -64,9 +65,11 @@ sub addDefaultSettingsFrom {
     }
     my $delegate = undef;
     foreach my $fileName ( reverse @settingsFiles ) {
-        my $vars = eval "require '$fileName';" || fatal( 'Cannot read file', "$fileName\n", $@ );
-        
-        $delegate = Macrobuild::Settings->new( $fileName, $vars, $delegate );
+        if( -e $fileName ) {
+            my $vars = eval "require '$fileName';" || fatal( 'Cannot read file', "$fileName\n", $@ );
+
+            $delegate = Macrobuild::Settings->new( $fileName, $vars, $delegate );
+        }
     }
     $self->{delegate} = $delegate;
 }

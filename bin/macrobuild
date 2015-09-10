@@ -27,19 +27,26 @@ use Macrobuild::Settings;
 use Macrobuild::TaskRun;
 
 my @taskNames; # names of the tasks to run
-my $verbose = 0;
-my $interactive;
-my $help;
-my $logconf;
-my $vars = {};
+my $verbose            = 0;
+my $interactive        = 0;
+my $listShortTaskNames = 0;
+my $help               = 0;
+my $logconf            = undef;
+my $vars               = {};
 
 for( my $i=0 ; $i<=$#ARGV ; ++$i ) {
     if( $ARGV[$i] eq '-i' || $ARGV[$i] eq '--interactive' ) {
         $interactive = 1;
+
     } elsif( $ARGV[$i] eq '-v' || $ARGV[$i] eq '--verbose' ) {
         $verbose += 1;
+
     } elsif( $ARGV[$i] eq '-h' || $ARGV[$i] eq '--help' ) {
         $help = 1;
+
+    } elsif( $ARGV[$i] eq '-l' || $ARGV[$i] eq '--list-short-task-names' ) {
+        $listShortTaskNames = 1;
+
     } elsif( $ARGV[$i] eq '-l' || $ARGV[$i] eq '--logConfFile' ) {
         ++$i;
         if( $i<= $#ARGV ) {
@@ -68,29 +75,37 @@ for( my $i=0 ; $i<=$#ARGV ; ++$i ) {
 if( $help ) {
     synopsisHelpQuit( 1 );
 }
-if( !@taskNames ) {
+if( !$listShortTaskNames && !@taskNames ) {
     synopsisHelpQuit();
 }
 
 my $settings = new Macrobuild::Settings( 'default', $vars );
 $settings->addDefaultSettingsFrom( 'local.pl', 'settings.pl' );
+my $shortTaskNames = $settings->getVariable( 'shortTaskNames', {} );
+
+if( $listShortTaskNames ) {
+    if( keys %$shortTaskNames ) {
+        use IO::Handle;
+        STDOUT->autoflush; # make sure it appears before subroutine bails out in case of error
+
+        foreach my $short ( sort keys %$shortTaskNames ) {
+            my $long = $shortTaskNames->{$short};
+            printf "%-20s => %s\n", $short, $long;
+            checkCleanLoadTask( $long );
+        }
+    } else {
+        print "No short task names defined.\n";
+    }
+    exit 0;
+}
 
 my @tasks = ();
 foreach my $taskName ( @taskNames ) {
-
-    if( $taskName =~ m!::! ) {
-        # Perl package name has been given as a task name
-        eval "require $taskName" || fatal( 'Cannot load package', "$taskName\n", $@ );
-    } else {
-        my $fileName = $taskName;
-        if( $fileName =~ m!^(.*)\.pm$! ) {
-            $taskName = $1;
-        } else {
-            $fileName = "$fileName.pm";
-        }
-        eval "require '$fileName';" || fatal( 'Cannot read file', "$fileName\n", $@ );
-        $taskName =~ s!/!::!g;
+    if( exists( $shortTaskNames->{$taskName} )) {
+        $taskName = $shortTaskNames->{$taskName};
     }
+    $taskName = checkCleanLoadTask( $taskName );
+
     my $t = $taskName->new( '_settings' => $settings );
     unless( $t ) {
         fatal( "Cannot find or run task $taskName" );
@@ -112,6 +127,27 @@ foreach my $taskName ( @taskNames ) {
 exit 0;
 
 #####
+sub checkCleanLoadTask {
+    my $taskName = shift;
+
+    if( $taskName =~ m!::! ) {
+        # Perl package name has been given as a task name
+        eval "require $taskName" || fatal( 'Cannot load package', "$taskName\n", $@ );
+
+    } else {
+        my $fileName = $taskName;
+        if( $fileName =~ m!^(.*)\.pm$! ) {
+            $taskName = $1;
+        } else {
+            $fileName = "$fileName.pm";
+        }
+        eval "require '$fileName';" || fatal( 'Cannot read file', "$fileName\n", $@ );
+        $taskName =~ s!/!::!g;
+    }
+    return $taskName;
+}
+
+#####
 sub synopsisHelpQuit {
     my $long   = shift;
 
@@ -128,6 +164,15 @@ END
         print <<END;
         Run the named build tasks. Optionally, specify parameters as key-value pairs that will be
         available to the tasks, and a log configuration file.
+
+END
+    }
+    print "    $0 --list-short-task-names\n";
+    if( $long ) {
+        print <<END;
+        List the tasks with short names that have been defined in the settings.pl or local.pl file. If
+        no such short names have been defined, you need to specify the full qualified name of the
+        task, such as Macrobuild::UBOS::Hello
 
 END
     }
