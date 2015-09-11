@@ -27,71 +27,52 @@ use Macrobuild::Settings;
 use Macrobuild::TaskRun;
 
 my @taskNames; # names of the tasks to run
-my $verbose            = 0;
-my $interactive        = 0;
-my $listShortTaskNames = 0;
-my $help               = 0;
-my $logconf            = undef;
-my $vars               = {};
+my $verbose       = 0;
+my $interactive   = 0;
+my $listShortcuts = 0;
+my $help          = 0;
+my $logconf       = undef;
 
-for( my $i=0 ; $i<=$#ARGV ; ++$i ) {
-    if( $ARGV[$i] eq '-i' || $ARGV[$i] eq '--interactive' ) {
-        $interactive = 1;
+my $settings = new Macrobuild::Settings( 'default' );
+my $err      = $settings->addArgumentsFrom( \@ARGV, \$interactive, \$verbose, \$help, \$listShortcuts, \$logconf, \@taskNames );
 
-    } elsif( $ARGV[$i] eq '-v' || $ARGV[$i] eq '--verbose' ) {
-        $verbose += 1;
-
-    } elsif( $ARGV[$i] eq '-h' || $ARGV[$i] eq '--help' ) {
-        $help = 1;
-
-    } elsif( $ARGV[$i] eq '-l' || $ARGV[$i] eq '--list-short-task-names' ) {
-        $listShortTaskNames = 1;
-
-    } elsif( $ARGV[$i] eq '-l' || $ARGV[$i] eq '--logConfFile' ) {
-        ++$i;
-        if( $i<= $#ARGV ) {
-            $logconf = $ARGV[$i];
-        } else {
-            synopsisHelpQuit();
-        }
-        
-    } elsif( $ARGV[$i] =~ m!^--?(\S+)$! ) {
-        my $name = $1;
-        ++$i;
-        if( $i<= $#ARGV ) {
-            if( exists( $vars->{$name} )) {
-                push @{$vars->{$name}}, $ARGV[$i];
-            } else {
-                $vars->{$name} = [ $ARGV[$i] ];
-            }
-        } else {
-            synopsisHelpQuit();
-        }
+if( $err ) {
+    if( $err == 1 ) {
+        synopsisHelpQuit();
     } else {
-       push @taskNames, $ARGV[$i];
+        error( $err );
+        exit 1;
     }
 }
 
 if( $help ) {
     synopsisHelpQuit( 1 );
 }
-if( !$listShortTaskNames && !@taskNames ) {
+if( !$listShortcuts && !@taskNames ) {
     synopsisHelpQuit();
 }
 
-my $settings = new Macrobuild::Settings( 'default', $vars );
 $settings->addDefaultSettingsFrom( 'local.pl', 'settings.pl' );
-my $shortTaskNames = $settings->getVariable( 'shortTaskNames', {} );
+my $shortcuts = _determineEffectiveShortcuts( $settings->getAllVariableValues( 'shortcuts', {} ) );
 
-if( $listShortTaskNames ) {
-    if( keys %$shortTaskNames ) {
+if( $listShortcuts ) {
+    if( keys %$shortcuts ) {
         use IO::Handle;
         STDOUT->autoflush; # make sure it appears before subroutine bails out in case of error
 
-        foreach my $short ( sort keys %$shortTaskNames ) {
-            my $long = $shortTaskNames->{$short};
-            printf "%-20s => %s\n", $short, $long;
-            checkCleanLoadTask( $long );
+        my $max = 8;
+        foreach my $short ( keys %$shortcuts ) {
+            if( length( $short ) > $max ) {
+                $max = length( $short );
+            }
+        }
+        foreach my $short ( sort keys %$shortcuts ) {
+            my $long = $shortcuts->{$short};
+            if( ref( $long ) eq 'ARRAY' ) {
+                $long = $long->[0];
+            }
+            printf "%-" . $max . "s => %s\n", $short, $long;
+            _checkCleanLoadTask( $long );
         }
     } else {
         print "No short task names defined.\n";
@@ -101,10 +82,18 @@ if( $listShortTaskNames ) {
 
 my @tasks = ();
 foreach my $taskName ( @taskNames ) {
-    if( exists( $shortTaskNames->{$taskName} )) {
-        $taskName = $shortTaskNames->{$taskName};
+    if( exists( $shortcuts->{$taskName} )) {
+        if( ref( $shortcuts->{$taskName} ) eq 'ARRAY' ) {
+            my @args = @{$shortcuts->{$taskName}};
+            $taskName = shift @args;
+
+            $settings->addArgumentsFrom( \@args );
+
+        } else {
+            $taskName = $shortcuts->{$taskName};
+        }
     }
-    $taskName = checkCleanLoadTask( $taskName );
+    $taskName = _checkCleanLoadTask( $taskName );
 
     my $t = $taskName->new( '_settings' => $settings );
     unless( $t ) {
@@ -127,7 +116,7 @@ foreach my $taskName ( @taskNames ) {
 exit 0;
 
 #####
-sub checkCleanLoadTask {
+sub _checkCleanLoadTask {
     my $taskName = shift;
 
     if( $taskName =~ m!::! ) {
@@ -145,6 +134,41 @@ sub checkCleanLoadTask {
         $taskName =~ s!/!::!g;
     }
     return $taskName;
+}
+
+#####
+sub _determineEffectiveShortcuts {
+    my @shortcutDefs = @_;
+
+    # take what's in the first non-null element, and resolve further down the line if it says so
+    my $first;
+    while( !( $first = shift @shortcutDefs )) {
+        # no op
+    }
+
+    my $ret = {};
+    if( $first ) {
+        foreach my $key ( keys %$first ) {
+            my $value = $first->{$key};
+            if( defined( $value )) {
+                $ret->{$key} = $value;
+            } else {
+                # keep looking
+                foreach my $later ( @shortcutDefs ) {
+                    if( exists( $later->{$key} )) {
+                        if( $later->{$key} ) {
+                            $ret->{$key} = $later->{$key};
+                            last;
+                        } # else keep looking
+                    } else {
+                        last;
+                    }
+                }
+            }
+        }
+    }
+
+    return $ret;
 }
 
 #####
@@ -167,11 +191,11 @@ END
 
 END
     }
-    print "    $0 --list-short-task-names\n";
+    print "    $0 --list-shortcuts\n";
     if( $long ) {
         print <<END;
-        List the tasks with short names that have been defined in the settings.pl or local.pl file. If
-        no such short names have been defined, you need to specify the full qualified name of the
+        List the tasks shortcuts that have been defined in the settings.pl or local.pl file. If
+        no such shortcuts have been defined, you need to specify the full qualified name of the
         task, such as Macrobuild::UBOS::Hello
 
 END

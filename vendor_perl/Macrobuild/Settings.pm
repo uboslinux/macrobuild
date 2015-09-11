@@ -33,10 +33,10 @@ use fields qw( name vars delegate );
 # $vars: variables available to the tasks
 # $delegate: a delegate Settings objects to consult if a value was not available locally
 sub new {
-    my $self = shift;
-    my $name = shift;
-    my $vars = shift;
-    my $delegate = shift;
+    my $self     = shift;
+    my $name     = shift;
+    my $vars     = shift || {};
+    my $delegate = shift || undef;
 
     unless( ref $self ) {
         $self = fields::new( $self );
@@ -60,10 +60,7 @@ sub addDefaultSettingsFrom {
     my $self          = shift;
     my @settingsFiles = @_;
 
-    if( $self->{delegate} ) {
-        fatal( 'Cannot add delegate, have one already: addDefaultSettingsFrom(', @settingsFiles, ')' );
-    }
-    my $delegate = undef;
+    my $delegate = $self->{delegate};
     foreach my $fileName ( reverse @settingsFiles ) {
         if( -e $fileName ) {
             my $vars = eval "require '$fileName';" || fatal( 'Cannot read file', "$fileName\n", $@ );
@@ -72,6 +69,90 @@ sub addDefaultSettingsFrom {
         }
     }
     $self->{delegate} = $delegate;
+}
+
+##
+# Add variables by parsing the provided argument array.
+# $args: array
+# return: 0: ok, 1: syopsisHelpQuit, other: error message
+sub addArgumentsFrom {
+    my $self           = shift;
+    my $args           = shift;
+    my $interactiveP   = shift;
+    my $verboseP       = shift;
+    my $helpP          = shift;
+    my $listShortcutsP = shift;
+    my $logconfP       = shift;
+    my $taskNamesP     = shift;
+
+    my $vars = {};
+    my $NOT_HERE = 'Option not allowed here: ';
+
+    for( my $i=0 ; $i<@$args ; ++$i ) {
+        if( $args->[$i] eq '-i' || $args->[$i] eq '--interactive' ) {
+            if( defined( $interactiveP )) {
+                $$interactiveP = 1;
+            } else {
+                return $NOT_HERE . '--interactive';
+            }
+
+        } elsif( $args->[$i] eq '-v' || $args->[$i] eq '--verbose' ) {
+            if( defined( $verboseP )) {
+                $$verboseP += 1;
+            } else {
+                return $NOT_HERE . '--verbose';
+            }
+
+        } elsif( $args->[$i] eq '-h' || $args->[$i] eq '--help' ) {
+            if( defined( $helpP )) {
+                $$helpP = 1;
+            } else {
+                return $NOT_HERE . '--help';
+            }
+
+        } elsif( $args->[$i] eq '-l' || $args->[$i] eq '--list-shortcuts' ) {
+            if( defined( $listShortcutsP )) {
+                $$listShortcutsP = 1;
+            } else {
+                return $NOT_HERE . '--list-shortcuts';
+            }
+
+        } elsif( $args->[$i] eq '-l' || $args->[$i] eq '--logConfFile' ) {
+            if( defined( $logconfP )) {
+                ++$i;
+                if( $i < @$args ) {
+                    $$logconfP = $args->[$i];
+                } else {
+                    return 1;
+                }
+            } else {
+                return $NOT_HERE . '--logConfFile';
+            }
+            
+        } elsif( $args->[$i] =~ m!^--?(\S+)$! ) {
+            my $name = $1;
+            ++$i;
+            if( $i < @$args ) {
+                if( exists( $vars->{$name} )) {
+                    push @{$vars->{$name}}, $args->[$i];
+                } else {
+                    $vars->{$name} = [ $args->[$i] ];
+                }
+            } else {
+                return 1;
+            }
+        } else {
+            if( defined( $taskNamesP )) {
+               push @$taskNamesP, $args->[$i];
+            } else {
+                return $NOT_HERE . '<taskname>';
+            }
+        }
+    }
+    if( keys %$vars ) {
+        $self->{delegate} = Macrobuild::Settings->new( 'local settings', $vars, $self->{delegate} );
+    }
+    return 0;
 }
 
 ##
@@ -96,6 +177,7 @@ sub getDelegate {
 # Get a variable
 # $n: name of the variable
 # $default: value to return if otherwise undef would be returned
+# return: value
 sub getVariable {
     my $self    = shift;
     my $n       = shift;
@@ -115,6 +197,26 @@ sub getVariable {
         $ret = $default;
     }
     return $ret;
+}
+
+##
+# Get all values of a variable through the chains of delegates
+# $n: name of the variable
+# $default: value to return if otherwise undef would be returned
+# return: array of values
+sub getAllVariableValues {
+    my $self    = shift;
+    my $n       = shift;
+    my $default = shift;
+
+    my @ret = ( $self->{vars}->{$n} );
+    if( $self->{delegate} ) {
+        push @ret, $self->{delegate}->getAllVariableValues( $n, $default );
+    } else {
+        push @ret, $default;
+    }
+
+    return @ret;
 }
 
 ##
