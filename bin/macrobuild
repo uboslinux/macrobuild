@@ -30,11 +30,12 @@ my @taskNames; # names of the tasks to run
 my $verbose       = 0;
 my $interactive   = 0;
 my $listShortcuts = 0;
+my $printVars     = 0;
 my $help          = 0;
 my $logconf       = undef;
 
 my $settings = new Macrobuild::Settings( 'default' );
-my $err      = $settings->addArgumentsFrom( \@ARGV, \$interactive, \$verbose, \$help, \$listShortcuts, \$logconf, \@taskNames );
+my $err      = $settings->addArgumentsFrom( \@ARGV, \$interactive, \$verbose, \$help, \$listShortcuts, \$printVars, \$logconf, \@taskNames );
 
 if( $err ) {
     if( $err == 1 ) {
@@ -48,11 +49,20 @@ if( $err ) {
 if( $help ) {
     synopsisHelpQuit( 1 );
 }
-if( !$listShortcuts && !@taskNames ) {
+if( !$listShortcuts && !$printVars && !@taskNames ) {
     synopsisHelpQuit();
 }
-
-$settings->addDefaultSettingsFrom( 'local.pl', 'settings.pl' );
+if( $listShortcuts && $printVars ) {
+    synopsisHelpQuit();
+}
+    
+my ( $sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst ) = gmtime( time() );
+$settings->addDefaultSettingsFrom(
+    'local.pl',
+    'settings.pl',
+    {
+        'tstamp' => ( sprintf "%.4d%.2d%.2d-%.2d%.2d%.2d", ($year+1900), ( $mon+1 ), $mday, $hour, $min, $sec )
+    } );
 my $shortcuts = _determineEffectiveShortcuts( $settings->getAllVariableValues( 'shortcuts', {} ) );
 
 if( $listShortcuts ) {
@@ -78,6 +88,37 @@ if( $listShortcuts ) {
         print "No short task names defined.\n";
     }
     exit 0;
+}
+if( $printVars ) {
+    my $vars = $settings->getAllVariables();
+    my $max = length( '(overridden)' ) + 2;
+    foreach my $key ( keys %$vars ) {
+        if( length( $key ) > $max ) {
+            $max = length( $key );
+        }
+    }
+    foreach my $key ( sort keys %$vars ) {
+        my $values = $vars->{$key};
+        printf "%-" . $max . "s: %s\n", $key, _var2string( $values->[0] );
+        for( my $i=1 ; $i<@$values ; ++$i ) {
+            printf "%" . $max . "s  %s\n", '(overridden)', _var2string( $values->[$i] );
+        }
+    }
+}
+
+sub _var2string {
+    my $s = shift;
+
+    if( !defined( $s )) {
+        return '<undef>';
+    }
+    if( ref( $s ) eq 'ARRAY' ) {
+        return '[ ' . join( ', ', map { _var2string( $_ ) } @$s ) . ' ]';
+    }
+    if( ref( $s ) eq 'HASH' ) {
+        return '[ ' . join( ', ', map { "$_ => " . _var2string( $s->{$_} ) } sort keys %$s ) . ' ]';
+    }
+    return $s;
 }
 
 my @tasks = ();
@@ -197,6 +238,13 @@ END
         List the tasks shortcuts that have been defined in the settings.pl or local.pl file. If
         no such shortcuts have been defined, you need to specify the full qualified name of the
         task, such as Macrobuild::UBOS::Hello
+
+END
+    }
+    print "    $0 --print-vars\n";
+    if( $long ) {
+        print <<END;
+        Print the known variables that can be used in build tasks.
 
 END
     }

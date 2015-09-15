@@ -46,9 +46,6 @@ sub new {
     $self->{vars}     = $vars;
     $self->{delegate} = $delegate;
 
-    my ( $sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst ) = gmtime( time() );
-    $self->{vars}->{tstamp} = sprintf "%.4d%.2d%.2d-%.2d%.2d%.2d", ($year+1900), ( $mon+1 ), $mday, $hour, $min, $sec;
-    
     return $self;
 }
 
@@ -82,6 +79,7 @@ sub addArgumentsFrom {
     my $verboseP       = shift;
     my $helpP          = shift;
     my $listShortcutsP = shift;
+    my $printVars      = shift;
     my $logconfP       = shift;
     my $taskNamesP     = shift;
 
@@ -115,6 +113,13 @@ sub addArgumentsFrom {
                 $$listShortcutsP = 1;
             } else {
                 return $NOT_HERE . '--list-shortcuts';
+            }
+
+        } elsif( $args->[$i] eq '-p' || $args->[$i] eq '--print-vars' ) {
+            if( defined( $printVars )) {
+                $$printVars = 1;
+            } else {
+                return $NOT_HERE . '--print-vars';
             }
 
         } elsif( $args->[$i] eq '-l' || $args->[$i] eq '--logConfFile' ) {
@@ -183,8 +188,9 @@ sub getVariable {
     my $n       = shift;
     my $default = shift;
 
-    my $ret = $self->{vars}->{$n};
-    if( $ret ) {
+    my $ret;
+    if( exists( $self->{vars}->{$n} )) {
+        $ret = $self->{vars}->{$n};
         if( 'ARRAY' eq ref( $ret ) && @$ret == 1 ) {
             return $ret->[0];
         } else {
@@ -220,18 +226,41 @@ sub getAllVariableValues {
 }
 
 ##
+# Return all variables with their defined values. The values are arrays,
+# with the first element being the official value, and subsequent elements
+# values that have been overridden
+# $resolve: during recursion, the $settings object to use for variable resolution
+# $insertHere: during recursion, insert results in this hash
+sub getAllVariables {
+    my $self       = shift;
+    my $resolve    = shift || $self;
+    my $insertHere = shift || {};
+
+    foreach my $key ( keys %{$self->{vars}} ) {
+        unless( exists( $insertHere->{$key} )) {
+            $insertHere->{$key} = [];
+        }
+        push @{$insertHere->{$key}}, $resolve->replaceVariables( $self->{vars}->{$key}, undef, 1 );
+    }
+    if( $self->{delegate} ) {
+        $self->{delegate}->getAllVariables( $resolve, $insertHere );
+    }
+    return $insertHere;
+}
+
+##
 # Replace all variables in a string. A variable is referred to by
 # the syntax '${xxx}' where 'xxx' is the variable name. If '$' is
 # preceded by a backslash, this occurrence is skipped.
 # $s: the string containing the variables
 # $additional: an optional hash with additional variable settings
-# $undefIfUndef: return undef if not all variables could be replaced
+# $unresolvedOk: return string containing unresolved variables if not all variables could be replaced
 # return: the string with variables returned, or undef
 sub replaceVariables {
     my $self         = shift;
     my $s            = shift;
     my $additional   = shift || {};
-    my $undefIfUndef = shift;
+    my $unresolvedOk = shift;
 
     unless( defined( $s )) {
         error( 'Cannot replace variables in undef' );
@@ -244,13 +273,10 @@ sub replaceVariables {
     my $ret = $s;
     for( my $i=0 ; $i<5 ; ++$i ) {
         # expand up to 5 times
-        $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->_replacement( $1, $additional, $s, $undefIfUndef )/ge;
+        $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->_replacement( $1, $additional, $s, $unresolvedOk )/ge;
         unless( $ret =~ m!\$\{^?! ) { # dear Perl: really! This time no \ in front of ?
             last;
         }
-    }
-    if( $undefIfUndef && $ret =~ m!\$\{\?! ) {
-        $ret = undef;
     }
 
     return $ret;
@@ -261,14 +287,14 @@ sub replaceVariables {
 # $matched: the matched pattern
 # $additional: an optional hash with additional variable settings
 # $s: the string containing the variables
-# $undefIfUndef: return undef if not all variables could be replaced
+# $unresolvedOk: return string containing unresolved variables if not all variables could be replaced
 # return: the replacement string
 sub _replacement {
     my $self         = shift;
     my $matched      = shift;
     my $additional   = shift;
     my $s            = shift;
-    my $undefIfUndef = shift;
+    my $unresolvedOk = shift;
 
     my $ret = $self->getVariable( $matched );
     # we cannot replace things that aren't strings or aren't 1-length arrays
@@ -283,8 +309,12 @@ sub _replacement {
         }
     }
     unless( $ret ) {
-        if( $undefIfUndef ) {
-            $ret = '${? ' . $matched . '}'
+        if( $unresolvedOk ) {
+            if( $matched =~ m!^\?! ) {
+                $ret = '{' . $matched . '}'; # got that before, no more ?
+            } else {
+                $ret = '${? ' . $matched . '}';
+            }
         } else {
             fatal( 'Unknown variable ' . $matched . ' in string:', $s );
         }
