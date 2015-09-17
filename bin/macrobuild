@@ -34,9 +34,14 @@ my $printVars     = 0;
 my $help          = 0;
 my $logconf       = undef;
 
-my $settings = new Macrobuild::Settings( 'default' );
-my $err      = $settings->addArgumentsFrom( \@ARGV, \$interactive, \$verbose, \$help, \$listShortcuts, \$printVars, \$logconf, \@taskNames );
+my ( $sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst ) = gmtime( time() );
+my $settings = new Macrobuild::Settings(
+        'default',
+        {
+            'tstamp' => ( sprintf "%.4d%.2d%.2d-%.2d%.2d%.2d", ($year+1900), ( $mon+1 ), $mday, $hour, $min, $sec )
+        } );
 
+my $err = $settings->addArgumentsFrom( \@ARGV, \$interactive, \$verbose, \$help, \$listShortcuts, \$printVars, \$logconf, \@taskNames );
 if( $err ) {
     if( $err == 1 ) {
         synopsisHelpQuit();
@@ -56,13 +61,9 @@ if( $listShortcuts && $printVars ) {
     synopsisHelpQuit();
 }
     
-my ( $sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst ) = gmtime( time() );
 $settings->addDefaultSettingsFrom(
     'local.pl',
-    'settings.pl',
-    {
-        'tstamp' => ( sprintf "%.4d%.2d%.2d-%.2d%.2d%.2d", ($year+1900), ( $mon+1 ), $mday, $hour, $min, $sec )
-    } );
+    'settings.pl' );
 my $shortcuts = _determineEffectiveShortcuts( $settings->getAllVariableValues( 'shortcuts', {} ) );
 
 if( $listShortcuts ) {
