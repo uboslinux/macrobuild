@@ -31,6 +31,7 @@ my $verbose       = 0;
 my $interactive   = 0;
 my $listShortcuts = 0;
 my $printVars     = 0;
+my $dryRun        = 0;
 my $help          = 0;
 my $logconf       = undef;
 
@@ -41,7 +42,17 @@ my $settings = new Macrobuild::Settings(
             'tstamp' => ( sprintf "%.4d%.2d%.2d-%.2d%.2d%.2d", ($year+1900), ( $mon+1 ), $mday, $hour, $min, $sec )
         } );
 
-my $err = $settings->addArgumentsFrom( \@ARGV, \$interactive, \$verbose, \$help, \$listShortcuts, \$printVars, \$logconf, \@taskNames );
+my $err = $settings->addArgumentsFrom(
+        \@ARGV,
+        \@taskNames,
+        \$interactive,
+        \$verbose,
+        \$help,
+        \$listShortcuts,
+        \$printVars,
+        \$dryRun,
+        \$logconf );
+
 if( $err ) {
     if( $err == 1 ) {
         synopsisHelpQuit();
@@ -80,10 +91,9 @@ if( $listShortcuts ) {
         foreach my $short ( sort keys %$shortcuts ) {
             my $long = $shortcuts->{$short};
             if( ref( $long ) eq 'ARRAY' ) {
-                $long = $long->[0];
+                $long = join( ' ', @$long );
             }
             printf "%-" . $max . "s => %s\n", $short, $long;
-            _checkCleanLoadTask( $long );
         }
     } else {
         print "No short task names defined.\n";
@@ -105,8 +115,63 @@ if( $printVars ) {
             printf "%" . $max . "s  %s\n", '(overridden)', _var2string( $values->[$i] );
         }
     }
+    exit 0;
 }
 
+my @allTaskNames = ();
+foreach my $taskName ( @taskNames ) {
+    if( exists( $shortcuts->{$taskName} )) {
+        if( ref( $shortcuts->{$taskName} ) eq 'ARRAY' ) {
+            my @subTaskNames = ();
+
+            $settings->addArgumentsFrom( $shortcuts->{$taskName}, \@subTaskNames );
+
+            foreach my $subTaskName ( @subTaskNames ) {
+                $subTaskName = _checkCleanLoadTask( $subTaskName );
+                push @allTaskNames, $subTaskName;
+
+            }
+
+        } else {
+            $taskName = $shortcuts->{$taskName};
+            $taskName = _checkCleanLoadTask( $taskName );
+
+            push @allTaskNames, $taskName;
+        }
+    } else {
+        $taskName = _checkCleanLoadTask( $taskName );
+
+        push @allTaskNames, $taskName;
+    }
+}
+
+if( $dryRun ) {
+    print join( '', map { "$_\n" } @allTaskNames );
+
+} else {
+    foreach my $taskName ( @allTaskNames ) {
+        my $t = $taskName->new( '_settings' => $settings );
+        unless( $t ) {
+            fatal( "Cannot find or run task $taskName" );
+        }
+
+        UBOS::Logging::initialize( 'macrobuild', $taskName, $verbose, $logconf );
+
+        my $run = new Macrobuild::TaskRun( $settings, undef, $interactive );
+
+        debug( "About to run", ref( $t ));
+
+        my $ret = $t->run( $run );
+        if( $ret < 0 ) {
+            error( "Aborting with error" );
+            exit( $ret );
+        }
+    }
+}
+
+exit 0;
+
+#####
 sub _var2string {
     my $s = shift;
 
@@ -121,41 +186,6 @@ sub _var2string {
     }
     return $s;
 }
-
-my @tasks = ();
-foreach my $taskName ( @taskNames ) {
-    if( exists( $shortcuts->{$taskName} )) {
-        if( ref( $shortcuts->{$taskName} ) eq 'ARRAY' ) {
-            my @args = @{$shortcuts->{$taskName}};
-            $taskName = shift @args;
-
-            $settings->addArgumentsFrom( \@args );
-
-        } else {
-            $taskName = $shortcuts->{$taskName};
-        }
-    }
-    $taskName = _checkCleanLoadTask( $taskName );
-
-    my $t = $taskName->new( '_settings' => $settings );
-    unless( $t ) {
-        fatal( "Cannot find or run task $taskName" );
-    }
-
-    UBOS::Logging::initialize( 'macrobuild', $taskName, $verbose, $logconf );
-
-    my $run = new Macrobuild::TaskRun( $settings, undef, $interactive );
-
-    debug( "About to run", ref( $t ));
-
-    my $ret = $t->run( $run );
-    if( $ret < 0 ) {
-        error( "Aborting with error" );
-        exit( $ret );
-    }
-}
-
-exit 0;
 
 #####
 sub _checkCleanLoadTask {
@@ -225,11 +255,12 @@ END
     } else {
         print "Synopsis:\n";
     }
-    print "    $0 [ --verbose ][ --logConfFile <log4perlconf> ][ --<key> <value> ]... <taskname> ...\n";
+    print "    $0 [ --dry-run ][ -n ][ --verbose ][ --logConfFile <log4perlconf> ][ --<key> <value> ]... <taskname> ...\n";
     if( $long ) {
         print <<END;
         Run the named build tasks. Optionally, specify parameters as key-value pairs that will be
         available to the tasks, and a log configuration file.
+        If --try-run or -n is given, do not execute.
 
 END
     }

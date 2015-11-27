@@ -75,13 +75,14 @@ sub addDefaultSettingsFrom {
 sub addArgumentsFrom {
     my $self           = shift;
     my $args           = shift;
+    my $taskNamesP     = shift;
     my $interactiveP   = shift;
     my $verboseP       = shift;
     my $helpP          = shift;
     my $listShortcutsP = shift;
-    my $printVars      = shift;
+    my $printVarsP     = shift;
+    my $dryRunP        = shift;
     my $logconfP       = shift;
-    my $taskNamesP     = shift;
 
     my $vars = {};
     my $NOT_HERE = 'Option not allowed here: ';
@@ -116,13 +117,20 @@ sub addArgumentsFrom {
             }
 
         } elsif( $args->[$i] eq '-p' || $args->[$i] eq '--print-vars' ) {
-            if( defined( $printVars )) {
-                $$printVars = 1;
+            if( defined( $printVarsP )) {
+                $$printVarsP = 1;
             } else {
                 return $NOT_HERE . '--print-vars';
             }
 
-        } elsif( $args->[$i] eq '-l' || $args->[$i] eq '--logConfFile' ) {
+        } elsif( $args->[$i] eq '-n' || $args->[$i] eq '--dry-run' ) {
+            if( defined( $dryRunP )) {
+                $$dryRunP = 1;
+            } else {
+                return $NOT_HERE . '--dry-run';
+            }
+
+        } elsif( $args->[$i] eq '--logConfFile' ) {
             if( defined( $logconfP )) {
                 ++$i;
                 if( $i < @$args ) {
