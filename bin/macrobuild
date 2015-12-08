@@ -42,6 +42,10 @@ my $settings = new Macrobuild::Settings(
             'tstamp' => ( sprintf "%.4d%.2d%.2d-%.2d%.2d%.2d", ($year+1900), ( $mon+1 ), $mday, $hour, $min, $sec )
         } );
 
+$settings->addDefaultSettingsFrom(
+    'local.pl',
+    'settings.pl' );
+
 my $err = $settings->addArgumentsFrom(
         \@ARGV,
         \@taskNames,
@@ -72,9 +76,6 @@ if( $listShortcuts && $printVars ) {
     synopsisHelpQuit();
 }
     
-$settings->addDefaultSettingsFrom(
-    'local.pl',
-    'settings.pl' );
 my $shortcuts = _determineEffectiveShortcuts( $settings->getAllVariableValues( 'shortcuts', {} ) );
 
 if( $listShortcuts ) {
