@@ -306,17 +306,17 @@ sub _replacement {
 
     my $ret = $self->getVariable( $matched );
     # we cannot replace things that aren't strings or aren't 1-length arrays
-    if( $ret && 'ARRAY' eq ref( $ret ) && @$ret == 1 ) {
+    if( defined( $ret ) && 'ARRAY' eq ref( $ret ) && @$ret == 1 ) {
         $ret = $ret->[0];
     }
-    if( !$ret || ref( $ret )) {
+    if( ! defined( $ret ) || ref( $ret )) {
         $ret = $additional->{$matched};
 
-        if( $ret && 'ARRAY' eq ref( $ret ) && @$ret == 1 ) {
+        if( defined( $ret ) && 'ARRAY' eq ref( $ret ) && @$ret == 1 ) {
             $ret = $ret->[0];
         }
     }
-    unless( $ret ) {
+    unless( defined( $ret )) {
         if( $unresolvedOk ) {
             if( $matched =~ m!^\?! ) {
                 $ret = '{' . $matched . '}'; # got that before, no more ?

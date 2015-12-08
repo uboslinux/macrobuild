@@ -2,7 +2,7 @@
 # A build Task that takes the JSON subtrees below several keys, and merges it
 #
 # This file is part of macrobuild.
-# (C) 2014 Indie Computing Corp.
+# (C) 2014-2015 Indie Computing Corp.
 #
 # macrobuild is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 use strict;
 use warnings;
 
-package Macrobuild::CompositeTasks::MergeValuesTask;
+package Macrobuild::CompositeTasks::MergeValues;
 
 use base qw( Macrobuild::Task );
 use fields qw( keys );
