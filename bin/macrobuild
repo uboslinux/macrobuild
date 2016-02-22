@@ -83,18 +83,24 @@ if( $listShortcuts ) {
         use IO::Handle;
         STDOUT->autoflush; # make sure it appears before subroutine bails out in case of error
 
-        my $max = 8;
-        foreach my $short ( keys %$shortcuts ) {
-            if( length( $short ) > $max ) {
-                $max = length( $short );
+        if( $verbose ) {
+            my $max = 8;
+            foreach my $short ( keys %$shortcuts ) {
+                if( length( $short ) > $max ) {
+                    $max = length( $short );
+                }
             }
-        }
-        foreach my $short ( sort keys %$shortcuts ) {
-            my $long = $shortcuts->{$short};
-            if( ref( $long ) eq 'ARRAY' ) {
-                $long = join( ' ', @$long );
+            foreach my $short ( sort keys %$shortcuts ) {
+                my $long = $shortcuts->{$short};
+                if( ref( $long ) eq 'ARRAY' ) {
+                    $long = join( ' ', @$long );
+                }
+                printf "%-" . $max . "s => %s\n", $short, $long;
             }
-            printf "%-" . $max . "s => %s\n", $short, $long;
+        } else {
+            foreach my $short ( keys %$shortcuts ) {
+                print "$short\n";
+            }
         }
     } else {
         print "No short task names defined.\n";
