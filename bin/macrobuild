@@ -98,7 +98,7 @@ if( $listShortcuts ) {
                 printf "%-" . $max . "s => %s\n", $short, $long;
             }
         } else {
-            foreach my $short ( keys %$shortcuts ) {
+            foreach my $short ( sort keys %$shortcuts ) {
                 print "$short\n";
             }
         }
