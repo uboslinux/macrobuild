@@ -60,6 +60,9 @@ sub addDefaultSettingsFrom {
     my $delegate = $self->{delegate};
     foreach my $fileName ( reverse @settingsFiles ) {
         if( -e $fileName ) {
+            unless( $fileName =~ m!^[/\.]! ) {
+                $fileName = "./$fileName"; # Perl 5.26 does not have . in @INC. Works if path is given
+            }
             my $vars = eval "require '$fileName';" || fatal( 'Cannot read file', "$fileName\n", $@ );
 
             $delegate = Macrobuild::Settings->new( $fileName, $vars, $delegate );
