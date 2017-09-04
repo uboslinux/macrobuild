@@ -1,4 +1,4 @@
-# 
+#
 # Inputs, outputs, and history information for the run of a Task
 #
 # It comes with a state machine:
@@ -75,12 +75,12 @@ sub createChildRun {
     my $ret;
     if( @{$self->{steps}} ) {
         my $lastElement = $self->{steps}->[-1];
-        
+
         if( $lastElement->{status} == 1 ) {
             $ret = new Macrobuild::TaskRun( $settings, $in, $self->{interactive}, $self );
 
             push @{$lastElement->{subRuns}}, $ret;
-            
+
         } elsif( $lastElement->{status} == 0 ) {
             error( "Cannot create a child run if a task has not been started", $lastElement->{task} );
         } else {
@@ -179,18 +179,18 @@ sub taskStarting {
 
                 if( $self->{interactive} ) {
                     print "** Starting task: $indent\"$taskName\". Hit return to continue.\n";
-                    debug( "Task stack:", sub { "\n    " . join( "\n    ", $self->parentStack() ) } );
-                    debug( 'Task input:', sub { _resultsAsString( $lastElement->{in} ) } );
-                    
+                    trace( "Task stack:", sub { "\n    " . join( "\n    ", $self->parentStack() ) } );
+                    trace( 'Task input:', sub { _resultsAsString( $lastElement->{in} ) } );
+
                     getc();
 
                 } else {
                     info( 'Starting task:', "$indent$taskName" );
-                    debug( 'Task input:',  sub { _resultsAsString( $lastElement->{in} ) }  );
+                    trace( 'Task input:',  sub { _resultsAsString( $lastElement->{in} ) }  );
                 }
             }
             return $lastElement->{in};
-            
+
         } elsif( $lastElement->{status} == 1 ) {
             error( "Task running already, cannot be started again", $task );
             return undef;
@@ -215,7 +215,7 @@ sub taskEnded {
     my $output = shift;
     my $status = shift;
 
-    debug(  'Task ended with status:',
+    trace(  'Task ended with status:',
             sub {
                 if( defined( $status )) {
                     if( $status == -1 ) {
@@ -227,7 +227,7 @@ sub taskEnded {
                     } else {
                         return "$status (?)";
                     }
-                        
+
                 } else {
                     return '<unknown>'
                 }
@@ -253,7 +253,7 @@ sub taskEnded {
 
     if( @{$self->{steps}} ) {
         my $lastElement = $self->{steps}->[-1];
-        
+
         if( $lastElement->{status} == 1 ) {
             if( $task == $lastElement->{task} ) {
                 $lastElement->{out}    = $output;
@@ -264,8 +264,8 @@ sub taskEnded {
                 push @{$self->{steps}}, $newStep;
             } else {
                 error( "Cannot end a different task than has been started", $task, $lastElement->{task} );
-            } 
-            
+            }
+
         } elsif( $lastElement->{status} == 0 ) {
             error( "Cannot end a task that has not started", $task, $lastElement->{task} );
         } else {
@@ -327,12 +327,12 @@ sub resultsAsString {
 sub _resultsAsString {
     my $obj    = shift;
     my $indent = shift || 0 ;
-    
+
     my $is = '    ' x $indent;
 
     if( !defined( $obj )) {
-		return '<undef>';
-	} elsif( ref( $obj ) eq 'HASH' ) {
+        return '<undef>';
+    } elsif( ref( $obj ) eq 'HASH' ) {
         return "{\n"
                . join( '',
                        map {

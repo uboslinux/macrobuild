@@ -1,20 +1,19 @@
 developer="http://indiecomputing.com/"
 url="http://ubos.net/"
-maintainer=$developer
+maintainer=${developer}
 pkgname=macrobuild
-pkgver=0.36
+pkgver=0.37
 pkgrel=1
 pkgdesc="Build framework for large, 'macro' tasks"
 arch=('any')
 license=('GPL')
 depends=('perl')
 options=('!strip')
+_vendor_perl=$(perl -V::vendorarch: | sed -e "s![' ]!!g")
 
 package() {
     for d in Macrobuild Macrobuild/BasicTasks Macrobuild/CompositeTasks; do
-        mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/$d
-        install -m644 $startdir/vendor_perl/$d/*.pm $pkgdir/usr/lib/perl5/vendor_perl/$d
+        install -D -m644 ${startdir}/vendor_perl/$d/*.pm -t ${pkgdir}${vendor_perl}/$d/
     done
-    mkdir -p $pkgdir/usr/bin
-    install -m755 $startdir/bin/macrobuild $pkgdir/usr/bin/
+    install -D -m755 ${startdir}/bin/macrobuild -t ${pkgdir}/usr/bin/
 }

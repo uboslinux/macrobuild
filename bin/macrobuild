@@ -75,7 +75,7 @@ if( !$listShortcuts && !$printVars && !@taskNames ) {
 if( $listShortcuts && $printVars ) {
     synopsisHelpQuit();
 }
-    
+
 my $shortcuts = _determineEffectiveShortcuts( $settings->getAllVariableValues( 'shortcuts', {} ) );
 
 if( $listShortcuts ) {
@@ -166,7 +166,7 @@ if( $dryRun ) {
 
         my $run = new Macrobuild::TaskRun( $settings, undef, $interactive );
 
-        debug( "About to run", ref( $t ));
+        trace( "About to run", ref( $t ));
 
         my $ret = $t->run( $run );
         if( $ret < 0 ) {
