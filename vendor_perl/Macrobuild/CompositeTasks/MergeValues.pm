@@ -2,7 +2,7 @@
 # A build Task that takes the JSON subtrees below several keys, and merges it
 #
 # This file is part of macrobuild.
-# (C) 2014-2015 Indie Computing Corp.
+# (C) 2014-2017 Indie Computing Corp.
 #
 # macrobuild is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -38,32 +38,30 @@ sub new {
         $self = fields::new( $self );
     }
 
-    $self->{showInLog} = 0;
-    
     $self->SUPER::new( %args );
+    
+    $self->{showInLog} = 0;
     
     return $self;
 }
 
 ##
-# Run this task.
-# $run: the inputs, outputs, settings and possible other context info for the run
-sub run {
+# @Overridden
+sub runImpl {
     my $self = shift;
     my $run  = shift;
 
     my $keys = $self->{keys};
 
-    my $in = $run->taskStarting( $self );
+    my $in = $run->getInput();
 
     my $out = _merge( map { $in->{$_} } @$keys );
 
     if( defined( $out ) && $out == -1 ) {
-        $run->taskEnded( $self, $out, -1 );
-        return -1;
+        return $self->FAIL();
     } else {
-        $run->taskEnded( $self, $out, 0 );
-        return 0;
+        $run->setOutput( $out );
+        return $self->SUCCESS();
     }
 }
 

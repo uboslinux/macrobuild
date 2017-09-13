@@ -1,8 +1,8 @@
 # 
-# A Task that always fails.
+# Delegates to SearchReplace.
 #
 # This file is part of macrobuild.
-# (C) 2014 Indie Computing Corp.
+# (C) 2014-2017 Indie Computing Corp.
 #
 # macrobuild is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,27 +21,35 @@
 use strict;
 use warnings;
 
-package Macrobuild::BasicTasks::Fail;
+package TestTasks::DelegatingSearchReplace;
 
-use base qw( Macrobuild::Task );
+use base qw( Macrobuild::CompositeTasks::Delegating );
 use fields;
 
+use TestTasks::SearchReplace;
 use UBOS::Logging;
 
 ##
-# Run this task.
-# $run: the inputs, outputs, settings and possible other context info for the run
-sub run {
+# Constructor
+sub new {
     my $self = shift;
-    my $run  = shift;
-    
-    my $in = $run->taskStarting( $self );
+    my %args = @_;
 
-    error( "Task " . ref( $self ) . ": indeed, let's fail" );
+    unless( ref $self ) {
+        $self = fields::new( $self );
+    }
     
-    $run->taskEnded( $self, {}, -1 );
+    $self->SUPER::new( %args );
 
-    return -1;
+    $self->{delegate} = new TestTasks::SearchReplace(
+        'name'        => 'Delegated',
+        'pattern'     => '${DelegatingSearchReplaceTestPattern}bb',
+        'replacement' => 'X',
+    );
+
+    return $self;
 }
 
 1;
+
+

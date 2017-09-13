@@ -1,9 +1,9 @@
 # 
 # Delegates to another task which a subclass needs to define
-# in the constructor
+# in the constructor.
 #
 # This file is part of macrobuild.
-# (C) 2014 Indie Computing Corp.
+# (C) 2014-2017 Indie Computing Corp.
 #
 # macrobuild is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -38,40 +38,34 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-
-    $self->{showInLog} = 0;
     
     $self->SUPER::new( %args );
     
+    $self->{showInLog} = 0;
+
     return $self;
 }
 
 ##
-# Run this task.
-# $run: the inputs, outputs, settings and possible other context info for the run
-sub run {
+# @Overridden
+sub runImpl {
     my $self = shift;
     my $run  = shift;
 
-    my $in = $run->taskStarting( $self );
-
-    my $ret;
-    my $out;
     if( defined( $self->{delegate} )) {
-        my $childRun = $run->createChildRun( $in );
-        
-        $ret = $self->{delegate}->run( $childRun );
-        $out = $childRun->getOutput();
-        
+        my $childRun = $run->createChildRun( $self->{delegate} );
+
+        my $ret = $self->{delegate}->run( $childRun );
+
+        unless( $ret ) {
+            $run->setOutput( $childRun->getOutput() );
+        }
+        return $ret;
+
     } else {
         error( "No delegate defined for delegating task", $self->name );
-        $ret = -1;
-        $out = {};
+        return $self->FAIL;
     }
-
-    $run->taskEnded( $self, $out, $ret );
-
-    return $ret;
 }
 
 1;

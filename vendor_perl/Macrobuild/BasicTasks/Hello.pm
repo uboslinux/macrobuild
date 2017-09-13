@@ -1,8 +1,8 @@
 # 
-# Says hello.
+# Says hello or another message.
 #
 # This file is part of macrobuild.
-# (C) 2014 Indie Computing Corp.
+# (C) 2014-2017 Indie Computing Corp.
 #
 # macrobuild is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,23 +23,21 @@ use warnings;
 
 package Macrobuild::BasicTasks::Hello;
 
+use UBOS::Logging;
+
 use base qw( Macrobuild::Task );
-use fields;
+use fields qw( message );
 
 ##
-# Run this task.
-# $run: the inputs, outputs, settings and possible other context info for the run
-sub run {
+# @Overrides
+sub runImpl {
     my $self = shift;
     my $run  = shift;
 
-    my $in = $run->taskStarting( $self );
+    my $msg = $run->get( 'message', 'Message from task Hello: Hello! You called?' );
+    print( "$msg\n" );
 
-    print "Hello! You called?\n";
-
-    $run->taskEnded( $self, {}, 0 );
-
-    return 0;
+    return $self->SUCCESS;
 }    
 
 1;

@@ -2,7 +2,7 @@
 # A build Task that performs a number of other Tasks in sequence.
 #
 # This file is part of macrobuild.
-# (C) 2014 Indie Computing Corp.
+# (C) 2014-2017 Indie Computing Corp.
 #
 # macrobuild is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -38,43 +38,65 @@ sub new {
         $self = fields::new( $self );
     }
 
-    $self->{showInLog} = 0;
-    
     $self->SUPER::new( %args );
     
+    $self->{showInLog} = 0;
+
     return $self;
 }
 
 ##
-# Run this task.
-# $run: the inputs, outputs, settings and possible other context info for the run
-sub run {
+# Append a task
+# $task: the task to add
+sub appendTask {
+    my $self = shift;
+    my $task = shift;
+
+    push @{$self->{tasks}}, $task;
+}
+
+##
+# Obtain the tasks in this sequence.
+# return: the array of tasks
+sub tasks {
+    my $self = shift;
+
+    return @{$self->{tasks}};
+}
+
+##
+# @Overridden
+sub runImpl {
     my $self = shift;
     my $run  = shift;
 
-    my $in       = $run->taskStarting( $self );
-    my $childRun = $run->createChildRun( $in );
-
+    my $previousChildRun = undef;
     my $ret = 0;
-    foreach my $task ( @{$self->{tasks}} ) {
+    foreach my $childTask ( @{$self->{tasks}} ) {
 
-        my $taskRet = $task->run( $childRun );
+        my $childRun = $run->createChildRun( $childTask, $previousChildRun );
 
-        if( $taskRet ) {
-            if( $taskRet < 0 ) {
-                $ret = $taskRet;
+        my $childTaskRet = $childTask->run( $childRun );
+
+        $previousChildRun = $childRun;
+
+        if( $childTaskRet ) {
+            if( $childTaskRet < 0 ) {
+                $ret = $childTaskRet;
                 if( $self->{stopOnError} ) {
-                    error( "ERROR when executing " . $run->replaceVariables( $task->name()) . ". Stopping." );
+                    error( "ERROR when executing " . $run->replaceVariables( $childTask->name()) . ". Stopping." );
                     last;
                 }
             } else { # >0
                 if( $ret == 0 ) { # first one
-                    $ret = $taskRet;
+                    $ret = $childTaskRet;
                 }
             }
         }
     }
-    $run->taskEnded( $self, $childRun->getOutput(), $ret );
+    if( $previousChildRun ) {
+        $run->setOutput( $previousChildRun->getOutput() );
+    }
 
     return $ret;
 }    

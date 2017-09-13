@@ -14,9 +14,6 @@ where we pull together and test a large number of packages. Each of which
 is typically built with ant, make, makepkg and/or other tools, as
 macrobuild does not even attempt to address "micro" build requirements.
 
-macrobuild is independent of UBOS and can certainly be used for many other
-purposes as well.
-
 Contributions are welcome.
 
 # Philosphy:
@@ -46,14 +43,19 @@ the Perl class Task.pm and implementing an overridden `run` method.
 
 # How to run
 
-On Arch Linux or a derivative:
+## On UBOS:
 ```
-makepkg
-pacman -U macrobuild*xz
+sudo pacman -S macrobuild
 macrobuild <taskname>
 ```
-On all other operating systems, clone this repository, and run with
-```
-perl -I vendor_perl bin/macrobuild <taskname>
-```
 
+## On Arch Linux or a derivative:
+
+Add the UBOS tools per
+[UBOS documentation](http://ubos.net/docs/developers/install-ubos-tools.html).
+Then:
+
+```
+sudo pacman -S macrobuild
+macrobuild <taskname>
+```
