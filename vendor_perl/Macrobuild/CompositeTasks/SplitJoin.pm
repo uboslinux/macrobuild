@@ -4,10 +4,10 @@
 # which the parallel tasks should be processed.
 #
 # Note: parallel here means parallel with respect to the data flow, not in
-# terms of execution
+# terms of execution.
 #
 # This file is part of macrobuild.
-# (C) 2014-2015 Indie Computing Corp.
+# (C) 2014-2017 Indie Computing Corp.
 #
 # macrobuild is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@ use warnings;
 package Macrobuild::CompositeTasks::SplitJoin;
 
 use base qw( Macrobuild::Task );
-use fields qw( splitTask splitParallelTaskInputs parallelTasks parallelTasksSequence joinTask );
+use fields qw( splitTask parallelTasks parallelTasksSequence joinTask );
 
 use UBOS::Logging;
 
@@ -37,36 +37,34 @@ use UBOS::Logging;
 # Constructor
 sub new {
     my $self = shift;
-    my %args = @_;
+    my @args = @_;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-
+    
+    $self->SUPER::new( @args );
+    
     $self->{showInLog} = 0;
-    
-    $self->SUPER::new( %args );
-    
+
     return $self;
 }
 
 ##
-# Run this task.
-# $run: the inputs, outputs, settings and possible other context info for the run
-sub run {
+# @Overridden
+sub runImpl {
     my $self = shift;
     my $run  = shift;
 
     my $ret      = 0;
     my $continue = 1;
 
-    my $in       = $run->taskStarting( $self );
-    my $nextIn   = $in;
+    my $previousChildRun = undef;
 
     my $splitTask = $self->{splitTask};
     if( $splitTask ) {
-        my $childRun = $run->createChildRun( $in );
-        my $taskRet  = $splitTask->run( $childRun );
+        $previousChildRun = $run->createChildRun( $splitTask );
+        my $taskRet       = $splitTask->run( $previousChildRun );
 
         if( $taskRet ) {
             if( $taskRet < 0 ) {
@@ -81,12 +79,9 @@ sub run {
                 }
             }
         }
-        $nextIn = $childRun->getOutput();
     }
 
     if( $continue ) {
-        my $outData = {};
-
         # determine, check and clean up tasks sequence
         my %inSequence   = ();
         my @realSequence = ();
@@ -105,12 +100,13 @@ sub run {
         # put in the remaining tasks in a predictable sequence
         map { my $t = $_; unless( exists( $inSequence{$t} )) { push @realSequence, $t; } } sort keys %{$self->{parallelTasks}};
 
+        my $outData = {};
+
         foreach my $taskName ( @realSequence ) {
-			my $task = $self->{parallelTasks}->{$taskName};
+            my $task = $self->{parallelTasks}->{$taskName};
 
-            my $childRun = $run->createChildRun( $self->{splitParallelTaskInputs} ? $nextIn->{$taskName} : $nextIn );
-
-            my $taskRet = $task->run( $childRun );
+            my $childRun = $run->createChildRun( $task, $previousChildRun );
+            my $taskRet  = $task->run( $childRun );
 
             if( $taskRet ) {
                 if( $taskRet < 0 ) {
@@ -129,14 +125,17 @@ sub run {
             $outData->{$taskName} = $childRun->getOutput();
         }
 
-        $nextIn = $outData;
+        # we create a "disattached" $previousChildRun that carries the aggregated $outData
+        # as its output
+        $previousChildRun = Macrobuild::TaskRun->new( {}, $run, $self );
+        $previousChildRun->setOutput( $outData );
     }
     if( $continue ) {
         my $joinTask = $self->{joinTask};
         if( $joinTask ) {
-            my $childRun = $run->createChildRun( $nextIn );
+            $previousChildRun = $run->createChildRun( $joinTask, $previousChildRun );
         
-            my $taskRet = $joinTask->run( $childRun );
+            my $taskRet = $joinTask->run( $previousChildRun );
 
             if( $taskRet ) {
                 if( $taskRet < 0 ) {
@@ -151,11 +150,9 @@ sub run {
                     }
                 }
             }
-            $nextIn = $childRun->getOutput();
         }
     }
-
-    $run->taskEnded( $self, $nextIn, $ret );
+    $run->setOutput( $previousChildRun->getOutput() );
 
     return $ret;
 }
