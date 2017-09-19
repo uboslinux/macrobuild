@@ -1,4 +1,4 @@
-# 
+#
 # A build Task that takes the JSON subtrees below several keys, and merges it
 #
 # This file is part of macrobuild.
@@ -21,7 +21,7 @@
 use strict;
 use warnings;
 
-package Macrobuild::CompositeTasks::MergeValues;
+package Macrobuild::BasicTasks::MergeValues;
 
 use base qw( Macrobuild::Task );
 use fields qw( keys );
@@ -39,9 +39,10 @@ sub new {
     }
 
     $self->SUPER::new( %args );
-    
+
     $self->{showInLog} = 0;
-    
+    $self->{name}      = ref( $self );
+
     return $self;
 }
 
@@ -108,7 +109,7 @@ sub _merge {
                 }
             }
         }
-        
+
     } elsif( $type eq 'ARRAY' ) {
         $ret = [];
 

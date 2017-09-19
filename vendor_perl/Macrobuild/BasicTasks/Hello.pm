@@ -1,4 +1,4 @@
-# 
+#
 # Says hello or another message.
 #
 # This file is part of macrobuild.
@@ -23,7 +23,7 @@ use warnings;
 
 package Macrobuild::BasicTasks::Hello;
 
-use UBOS::Logging;
+use Macrobuild::Task;
 
 use base qw( Macrobuild::Task );
 use fields qw( message );
@@ -34,11 +34,11 @@ sub runImpl {
     my $self = shift;
     my $run  = shift;
 
-    my $msg = $run->get( 'message', 'Message from task Hello: Hello! You called?' );
+    my $msg = $run->getPropertyOrDefault( 'message', 'Message from task Hello: Hello! You called?' );
     print( "$msg\n" );
 
-    return $self->SUCCESS;
-}    
+    return SUCCESS;
+}
 
 1;
 

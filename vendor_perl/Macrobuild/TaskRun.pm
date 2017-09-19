@@ -24,11 +24,13 @@ use warnings;
 
 package Macrobuild::TaskRun;
 
-use fields qw( input output delegate children task );
+use base qw( Macrobuild::HasNamedValues );
+use fields qw( input output children task );
 
 use UBOS::Logging;
 use UBOS::Utils;
 use overload q{""} => 'toString';
+
 
 ##
 # Constructor.
@@ -44,9 +46,10 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
+    $self->SUPER::new( $delegate );
+
     $self->{input}    = $input;
     $self->{output}   = {};
-    $self->{delegate} = $delegate;
     $self->{children} = undef;
     $self->{task}     = $task;
 
@@ -56,10 +59,23 @@ sub new {
 ##
 # Obtain name. Derived from the task's name.
 # return: the name
-sub name {
+sub getName {
     my $self = shift;
 
-    return 'TaskRun for ' . $self->{task}->name();
+    my $taskName = $self->{task}->getName();
+    if( $taskName ) {
+        return 'TaskRun for ' . $taskName;
+    } else {
+        return 'TaskRun for unnamed task of type ' . ref( $self->{task} );
+    }
+}
+
+##
+# @Overridden
+sub getLocalValueNames {
+    my $self = shift;
+
+    return ();
 }
 
 ##
@@ -92,7 +108,7 @@ sub setOutput {
 
 ##
 # Create a child TaskRun object for child Tasks
-# 
+#
 # $sibTask: the Task that is run by this child TaskRun
 # $previousChildRun: if given, use its output as the new TaskRun's inputs. If
 #                    not given, use this TaskRun's inputs as the new TaskRun's
@@ -113,28 +129,73 @@ sub createChildRun {
 }
 
 ##
-# Enables a Task to get a named value from its TaskRun context. The
-# value is determined by first looking for values defined on the Task,
-# and then going up the delegation hierarchy.
-# 
+# Enables a Task to read one of its own properties. Variable references
+# are automatically expanded.
+# If no such value can be found, a fatal error occurs.
+#
+# $name: the name of the value
+# return: the value, or undef
+sub getProperty {
+    my $self = shift;
+    my $name = shift;
+
+    my $ret = $self->{task}->getProperty( $name );
+    if( defined( $ret )) {
+        $ret = $self->replaceVariables( $ret );
+    } else {
+        fatal( 'No such property value found:', $name, '. Task:', $self->{task}->getName() );
+    }
+    return $ret;
+}
+
+##
+# Enables a Task to read one of its own properties. Variable references
+# are automatically expanded.
+# If no such value can be found, return the default (which may be undef).
+#
 # $name: the name of the value
 # $default: the default value, if no other value can be found
 # return: the value, or undef
-sub get {
+sub getPropertyOrDefault {
     my $self    = shift;
-    my $param   = shift;
+    my $name    = shift;
     my $default = shift;
 
-    my $ret = $self->{task}->get( $param );
+    my $ret = $self->{task}->getPropertyOrDefault( $name, $default );
     if( defined( $ret )) {
-        $ret = Macrobuild::Utils::replaceVariables( $ret, $self );
-    } else {
-        $ret = $self->{delegate}->get( $param );
+        $ret = $self->replaceVariables( $ret );
     }
-    if( !defined( $ret ) && defined( $default )) {
-        $ret = Macrobuild::Utils::replaceVariables( $default, $self );
-    }
+    return $ret;
+}
 
+##
+# @Overridden
+sub getUnresolvedValue {
+    my $self    = shift;
+    my $name    = shift;
+    my $default = shift;
+
+    my $ret = $self->{task}->getPropertyOrDefault( $name, undef );
+    unless( defined( $ret )) {
+        $ret = $self->{task}->getUnresolvedTaskConstantOrDefault( $name, undef );
+    }
+    unless( defined( $ret )) {
+        $ret = $self->{delegate}->getUnresolvedValue( $name, $default );
+    }
+    return $ret;
+}
+
+##
+# @Overridden
+sub getUnresolvedParentValue {
+    my $self    = shift;
+    my $name    = shift;
+    my $default = shift;
+
+    my $ret = $self->{task}->getUnresolvedTaskConstantOrDefault( $name, undef );
+    unless( defined( $ret )) {
+        $ret = $self->{delegate}->getUnresolvedValue( $name, $default );
+    }
     return $ret;
 }
 
@@ -144,18 +205,20 @@ sub get {
 sub toString {
     my $self = shift;
 
-    my $ret = 'TaskRun(';
-    my $sep = ' ';
+    my $ret = overload::StrVal( $self ) . '( name="' . $self->getName();
+    my $sep = '", ';
     if( UBOS::Logging::isTraceActive() ) {
+        use Data::Dumper;
+
        if( $self->{input} ) {
-           $ret .= $sep . 'in=' . writeJsonToString( $self->{input} );
+           $ret .= $sep . 'in=' . Dumper( $self->{input} );
            $sep = ', ';
        }
        if( $self->{output} ) {
-           $ret .= $sep . 'out=' . writeJsonToString( $self->{output} );
+           $ret .= $sep . 'out=' . Dumper( $self->{output} );
            $sep = ', ';
        }
-        
+
     } elsif( UBOS::Logging::isInfoActive() ) {
        if( $self->{input} ) {
            $ret .= $sep . '#in=' . ( keys %{$self->{input}} );

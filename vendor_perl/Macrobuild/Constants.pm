@@ -28,7 +28,8 @@ package Macrobuild::Constants;
 use Macrobuild::Utils;
 use UBOS::Logging;
 
-use fields qw( name vars delegate );
+use base qw( Macrobuild::HasNamedValues );
+use fields qw( name vars );
 
 ##
 # Constructor
@@ -44,10 +45,10 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
+    $self->SUPER::new( $delegate );
 
     $self->{name}     = $name;
     $self->{vars}     = $vars;
-    $self->{delegate} = $delegate;
 
     return $self;
 }
@@ -66,51 +67,61 @@ sub readAndCreate {
 
     my $vars = eval "require '$fileName';" || fatal( 'Cannot read file', "$fileName\n", $@ );
 
-    return $self->new( $fileName, $vars, $delegate );
+    return $self->new( 'Constants read from ' . $fileName, $vars, $delegate );
 }
 
 ##
-# Get name of the settings object
+# Get name of this object, for debugging.
 # return: name
-sub name {
+sub getName {
     my $self = shift;
 
     return $self->{name};
 }
 
 ##
-# Obtain the delegate settings object, if any
-# return: the delegate
-sub getDelegate {
-    my $self = shift;
-    
-    return $self->{delegate};
-}
-
-##
-# Obtain a named value. If such a named value does not exist here,
-# we traverse up the delegation hierarchy.
-# 
-# $name: the name of the value
-# $default: the default value, if no other value can be found
-# return: the value, or undef
-sub get {
+# @Overridden
+sub getUnresolvedValue {
     my $self    = shift;
     my $name    = shift;
     my $default = shift;
 
     my $ret;
     if( exists( $self->{vars}->{$name} ) && defined( $self->{vars}->{$name} )) {
-        $ret = Macrobuild::Utils::replaceVariables( $self->{vars}->{$name}, $self );
+        $ret = $self->{vars}->{$name};
 
     } elsif( defined( $self->{delegate} )) {
-        $ret = $self->{delegate}->get( $name );
-    }
-    if( !defined( $ret ) && defined( $default )) {
-        $ret = Macrobuild::Utils::replaceVariables( $default, $self );
-    }
+        $ret = $self->{delegate}->getUnresolvedValue( $name, $default );
 
+    } else {
+        $ret = $default;
+    }
     return $ret;
+}
+
+##
+# @Overridden
+sub getUnresolvedParentValue {
+    my $self    = shift;
+    my $name   = shift;
+    my $default = shift;
+
+    my $ret;
+    if( defined( $self->{delegate} )) {
+        $ret = $self->{delegate}->getUnresolvedValue( $name, $default );
+
+    } else {
+        $ret = $default;
+    }
+    return $ret;
+}
+
+##
+# @Overridden
+sub getLocalValueNames {
+    my $self = shift;
+
+    return keys %{$self->{vars}};
 }
 
 ##
@@ -121,7 +132,7 @@ sub get {
 # $appendHere: append the values to this array, or create a new one
 # return: array of the values, the first of which is the actual value. Others
 #         are overridden values
-sub getAll {
+sub getAllValues {
     my $self       = shift;
     my $name       = shift;
     my $resolve    = shift || 0;
@@ -135,7 +146,7 @@ sub getAll {
         push @{$appendHere}, $value;
     }
     if( $self->{delegate} ) {
-        $self->{delegate}->getAll( $name, $resolve, $appendHere );
+        $self->{delegate}->getAllValues( $name, $resolve, $appendHere );
     }
     return $appendHere;
 }
@@ -148,7 +159,7 @@ sub getAll {
 # $insertHere: insert the values into this hash, or create a new one
 # return: hash of variable name to array of values, the first of which is the actual
 #         value. Others are overridden values.
-sub getAllWithAllValues {
+sub getAllNamedValuesWithAllValues {
     my $self       = shift;
     my $resolve    = shift || 0;
     my $insertHere = shift || {};
@@ -164,7 +175,7 @@ sub getAllWithAllValues {
         push @{$insertHere->{$key}}, $value;
     }
     if( $self->{delegate} ) {
-        $self->{delegate}->getAllWithAllValues( $resolve, $insertHere );
+        $self->{delegate}->getAllNamedValuesWithAllValues( $resolve, $insertHere );
     }
     return $insertHere;
 }

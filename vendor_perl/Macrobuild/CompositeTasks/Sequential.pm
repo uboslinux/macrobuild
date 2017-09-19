@@ -1,4 +1,4 @@
-# 
+#
 # A build Task that performs a number of other Tasks in sequence.
 #
 # This file is part of macrobuild.
@@ -38,9 +38,11 @@ sub new {
         $self = fields::new( $self );
     }
 
-    $self->SUPER::new( %args );
-    
     $self->{showInLog} = 0;
+    $self->{name}      = ref( $self );
+    $self->{tasks}     = [];
+
+    $self->SUPER::new( %args );
 
     return $self;
 }
@@ -56,9 +58,8 @@ sub appendTask {
 }
 
 ##
-# Obtain the tasks in this sequence.
-# return: the array of tasks
-sub tasks {
+# @Overridden
+sub getSubtasks {
     my $self = shift;
 
     return @{$self->{tasks}};
@@ -99,6 +100,6 @@ sub runImpl {
     }
 
     return $ret;
-}    
+}
 
 1;

@@ -77,7 +77,7 @@ if( $inputFile ) {
 
 my ( $sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst ) = gmtime( time() );
 my $constants = Macrobuild::Constants->new(
-        'default',
+        'Global constants',
         {
             'tstamp' => ( sprintf "%.4d%.2d%.2d-%.2d%.2d%.2d", ($year+1900), ( $mon+1 ), $mday, $hour, $min, $sec )
         } );
@@ -86,14 +86,10 @@ for my $defaultsFile ( './settings.pl', './local.pl' ) { # leading ./ required
         $constants = Macrobuild::Constants->readAndCreate( $defaultsFile, $constants );
     }
 }
-my $allShortcuts = $constants->getAll( 'shortcuts', undef );
-
-# Now figure out the task(s) to run -- we either find the single task, or assemble a Sequential
-
-my( $rootTask, $rootTaskConstants ) = _parseArgvToTask( \@ARGV, $constants );
+my $allShortcuts = $constants->getAllValues( 'shortcuts', undef );
 
 if( $printVars || $printResolvedVars ) {
-    my $vars = $constants->getAllWithAllValues( $printResolvedVars );
+    my $vars = $constants->getAllNamedValuesWithAllValues( $printResolvedVars );
     my $max = length( '(overridden)' ) + 2;
     foreach my $key ( keys %$vars ) {
         if( length( $key ) > $max ) {
@@ -136,7 +132,7 @@ if( $listShortcuts ) {
                 if( ref( $long ) eq 'ARRAY' ) {
                     $long = join( ' ', @$long );
                 }
-                printf "%-" . $max . "s => %s\n", $short, $long;
+                printf "%-" . $max . "s => %s\n", $short, ( $long ? $long : '<empty>' );
             }
         } else {
             foreach my $short ( sort keys %$mergedShortcuts ) {
@@ -144,18 +140,21 @@ if( $listShortcuts ) {
             }
         }
     } else {
-        print "No short task names defined.\n";
+        print "No shortcut task names defined.\n";
     }
     exit 0;
 }
 
-if( $dryRun ) {
-    print join( '', map { $_->name() . "\n" } $rootTask->tasks() );
+# Now figure out the task(s) to run -- we either find the single task, or assemble a Sequential
 
+my $rootTask = _parseArgvToTask( \@ARGV, $constants );
+
+if( $dryRun ) {
+    _printTaskRecursively( $rootTask );
     exit 0;
 }
 
-my $taskRun = Macrobuild::TaskRun->new( $inputJson, $rootTaskConstants, $rootTask );
+my $taskRun = Macrobuild::TaskRun->new( $inputJson, $constants, $rootTask );
 my $exit    = $rootTask->run( $taskRun );
 
 if( $exit < 0 ) {
@@ -176,33 +175,41 @@ exit( 0 );
 
 #####
 sub _parseArgvToTask {
-    my $args            = shift;
-    my $parentConstants = shift;
+    my $args             = shift;
+    my $globalConstants  = shift;
 
-    my $retTask         = undef;
-    my $retConstants    = $parentConstants;
-    my $currentTaskName = undef;
-    my $currentVars     = {};
+    my $retTask          = undef;
+    my $retTaskConstants = undef;
+    my $currentTaskName  = undef;
+    my $currentVars      = {};
+
+    unless( ref( $args )) {
+        $args = [ split( /\s+/, $args ) ]; # allow to use string instead of array if no further arguments
+    }
 
     for my $arg ( @$args ) {
+        $arg =~ s!^\s+!!;
+        $arg =~ s!\s+$!!;
         if( $arg =~ m!^([^=]+)=(.*)$! ) {
             my( $key, $value ) = ( $1, $2 );
             if( exists( $currentVars->{$key} )) {
-                fatal( 'Argument provided more than once:', $key );
+                unless( ref( $currentVars->{$key} )) {
+                    # turn it into an array
+                    $currentVars->{$key} = [ $currentVars->{$key} ];
+                }
+                push @{$currentVars->{$key}}, $value;
+            } else {
+                $currentVars->{$key} = $value;
             }
-            $currentVars->{$key} = $value;
-
         } else {
-            unless( $currentTaskName ) { # we don't have a task yet (just about to get one), so this is env vars
-                $retConstants = Macrobuild::Constants->new(
+            if( !$currentTaskName && %$currentVars ) { # we don't have a task yet (just about to get one), so this is env vars
+                $retTaskConstants = Macrobuild::Constants->new(
                         'env vars for ' . join( ' ', @$args ),
-                        $currentVars,
-                        $parentConstants );
-
+                        $currentVars );
                 $currentVars = {};
             }
             if( $currentTaskName ) { # we just finished parsing a task
-                my $newTask = _createTask( $currentTaskName, $currentVars );
+                my $newTask = _createTask( $currentTaskName, $currentVars, $globalConstants );
                 if( $retTask ) {
                     unless( ref $retTask eq 'Macrobuild::CompositeTasks::Sequential' ) {
                         $retTask = Macrobuild::CompositeTasks::Sequential->new( 'tasks' => [ $retTask ] );
@@ -211,15 +218,15 @@ sub _parseArgvToTask {
                 } else {
                     $retTask = $newTask;
                 }
-                
+
                 $currentTaskName = undef;
                 $currentVars     = {};
             }
-            $currentTaskName = $arg;
+            $currentTaskName = $globalConstants->replaceVariables( $arg );
         }
     }
     if( $currentTaskName ) {
-        my $newTask = _createTask( $currentTaskName, $currentVars );
+        my $newTask = _createTask( $currentTaskName, $currentVars, $globalConstants );
         if( $retTask ) {
             unless( ref $retTask eq 'Macrobuild::CompositeTasks::Sequential' ) {
                 $retTask = Macrobuild::CompositeTasks::Sequential->new( 'tasks' => [ $retTask ] );
@@ -232,22 +239,25 @@ sub _parseArgvToTask {
         fatal( 'No task name(s) given' );
     }
 
-    return ( $retTask, $retConstants );
+    if( $retTaskConstants ) {
+        $retTask->setTaskConstants( $retTaskConstants );
+    }
+
+    return $retTask;
 }
 
 #####
 sub _createTask {
     my $taskName        = shift;
     my $vars            = shift;
-    my $parentConstants = shift;
+    my $globalConstants = shift;
 
     my $ret = undef;
     # shortcuts can be defined in all files, and don't override each other
     if( $allShortcuts ) {
         for my $shortcuts ( @$allShortcuts ) {
             if( exists( $shortcuts->{$taskName} )) {
-                my $discard;
-                ( $ret, $discard ) = _parseArgvToTask( $shortcuts->{$taskName}, $parentConstants );
+                $ret = _parseArgvToTask( $shortcuts->{$taskName}, $globalConstants );
                 last;
             }
         }
@@ -272,6 +282,32 @@ sub _createTask {
     return $ret;
 }
 
+####
+sub _printTaskRecursively {
+    my $task            = shift;
+    my $remainingLevels = shift || -1;
+    my $indent          = shift || '';
+
+    my $taskName;
+    if( $task ) {
+        $taskName = $task->getName();
+    } else {
+        $taskName = 'NULL-TASK';
+    }
+    unless( $taskName ) {
+        $taskName = ref( $task );
+    }
+    print "$indent$taskName\n";
+
+    if( $task && ( $remainingLevels == -1 || --$remainingLevels > 0 )) {
+        my $subindent = $indent . '  ';
+        my @subtasks  = $task->getSubtasks();
+        foreach my $subtask ( @subtasks ) {
+            _printTaskRecursively( $subtask, $remainingLevels, $subindent );
+        }
+    }
+}
+
 #####
 sub _var2string {
     my $s = shift;
@@ -292,8 +328,70 @@ sub _var2string {
 sub synopsisHelpQuit {
     my $long = shift || 0;
 
-    print "Synopsis $long\n";
+    if( $long ) {
+        print <<END;
+macrobuild can be invoked as follows:
 
+    macrobuild <task>
+        Run a task. <task> is either a Perl module on the current path by
+        that name, or the name of a shortcut defined in the settings.pl
+        file.
+
+    macrobuild <task> <key>=<value> ...
+        Run a task. Prior to running, set the task's member variable <key>
+        to <value>. Any number of key-value pairs may be given.
+
+    macrobuild <task1> <key1>=<value1> ... <task2> <key2>=<value2> ...
+        Run task <task1>, followed by <task2>. Prior to running, set each
+        task's member variable(s) according to the key pairs following it
+        until the next task is listed. Any number of tasks may be listed.
+
+    macrobuild <key0=value0> <task1> <key1>=<value1> ... <task2> <key2>=<value2> ...
+        Run as before, but temporarily set the value of <key0> to <value0>.
+        This is typically used to override a value in settings.pl or
+        local.pl for this run only.
+
+The following optional arguments can be provided:
+
+    --logConfig <file>
+        Use an alternate log configuration file for this command.
+
+    --verbose
+        Display extra output. May be repeated for even more output.
+
+    --in <file>
+        Read and parse JSON file <file> and provide its content to the first
+        task to be run as input
+
+    --out <file>
+        Do not write any resulting JSON output to the console, but write
+        it to file <file> instead.
+
+    --list-shortcuts
+        Do not run any tasks. Show the known task shortcuts instead.
+        Adding -v provides more detail.
+
+    --print-vars
+        Show all named values that are defined globally (not local to a
+        task). If a variable refers to another, do not resolve the
+        reference.
+
+    --print-resolved-vars
+        Show all named values that are defined globally (not local to a
+        task). If a variable refers to another, resolve the reference
+        first.
+
+    --dry-run
+        Do not run; only print what would be done if run.
+
+    --help
+        Display help.
+END
+    } else {
+        print <<END;
+macrobuild
+END
+    }
     exit( 0 );
 }
 

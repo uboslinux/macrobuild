@@ -1,4 +1,4 @@
-# 
+#
 # An abstract Task for the build.
 #
 # This file is part of macrobuild.
@@ -23,10 +23,13 @@ use warnings;
 
 package Macrobuild::Task;
 
-use fields qw( name stopOnError showInLog );
+use fields qw( name setup taskConstants stopOnError showInLog );
 
 use UBOS::Logging;
 use overload q{""} => 'toString';
+
+use Exporter qw( import );
+our @EXPORT = qw( SUCCESS FAIL DONE_NOTHING );
 
 ##
 # Constructor
@@ -44,14 +47,14 @@ sub new {
     for( my $i=0; $i<@args ; $i+=2 ) {
         eval {
             $self->{$args[$i]} = $args[$i+1];
-        } || error( 'Cannot assign: there is no property', $args[$i], 'on objects of type', ref( $self ));
+        } || fatal( 'Cannot assign: there is no property "' . $args[$i] . '" on objects of type', ref( $self ));
     }
     return $self;
 }
 
 ##
 # Get the name of this task
-sub name {
+sub getName {
     my $self = shift;
 
     return $self->{name};
@@ -59,24 +62,87 @@ sub name {
 
 ##
 # Get the type of this task
-sub type {
+sub getType {
     my $self = shift;
 
     return ref( $self );
 }
 
 ##
+# Return sub-tasks (if there are any).
+# return: array of sub-tasks, may be empty
+sub getSubtasks {
+    my $self = shift;
+
+    return ();
+}
+
+##
+# Get the value of a constant attached to this task, which are not properties.
+# $name: the name of the constant
+# $default: the default value, if not found
+# return: the constant
+sub getUnresolvedTaskConstantOrDefault {
+    my $self    = shift;
+    my $name    = shift;
+    my $default = shift;
+
+    if( defined( $self->{taskConstants} )) {
+        return $self->{taskConstants}->getUnresolvedValue( $name, $default );
+    } else {
+        return $default;
+    }
+}
+
+##
+# Set the constants attached to this task.
+# $constants: the constants
+sub setTaskConstants {
+    my $self      = shift;
+    my $constants = shift;
+
+    if( defined( $self->{taskConstants} )) {
+        fatal( 'Have task constants already' );
+    }
+    $self->{taskConstants} = $constants;
+}
+
+##
 # Get a value that's locally specificied in this instance of Task
 # @param name the name of the value
 # return: the value, or undef
-sub get {
+sub getProperty {
     my $self  = shift;
     my $param = shift;
 
     my $ret = undef;
     eval {
         $ret = $self->{$param};
+        1; # otherwise the fatal triggers when $ret == undef
+    } || fatal( 'This object of type', ref( $self ), 'does not have a property', $param, $ret );
+
+    return $ret;
+}
+
+##
+# Get a value that's locally specificied in this instance of Task.
+# If the named property does not exist, or has no value, return the default
+#
+# @param name the name of the property
+# @param default the default value
+# return: the value, or undef
+sub getPropertyOrDefault {
+    my $self    = shift;
+    my $param   = shift;
+    my $default = shift;
+
+    my $ret = undef;
+    eval {
+        $ret = $self->{$param};
     }; # ignore error
+    unless( defined( $ret )) {
+        $ret = $default;
+    }
     return $ret;
 }
 
@@ -84,7 +150,7 @@ sub get {
 # If true, show this task in a log
 sub showInLog {
     my $self = shift;
-    
+
     return $self->{showInLog};
 }
 
@@ -96,15 +162,29 @@ sub run {
     my $self = shift;
     my $run  = shift;
 
+    if( defined( $self->{setup} )) {
+        debugAndSuspend( 'About to setup task:', $self, 'with', $run );
+
+        my $ret = $self->{setup}->( $run, $self );
+        # Don't need to pass in $self, it's usually in-lined into the constructor anyway
+        if( $ret == FAIL() ) {
+            error( 'Task setup failed, not running:', $self );
+            return $ret;
+        }
+    }
+
     debugAndSuspend( 'About to run task:', $self, 'with', $run );
+    trace( '++ About to run task:', $self );
 
     my $ret = $self->runImpl( $run );
 
-    debugAndSuspend( 'Done running task:', $self, 'with', $run );
+    debugAndSuspend( 'Done running task:', $self, 'with', $run, 'return code', $ret );
 
     return $ret;
 }
 
+##
+# Setup the task to be ready for running. By default, this does nothing.
 ##
 # Implementation of the run method for this task.
 # $run: the TaskRun object for the run

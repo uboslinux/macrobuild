@@ -1,4 +1,4 @@
-# 
+#
 # Delegates to another task which a subclass needs to define
 # in the constructor.
 #
@@ -38,12 +38,51 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    
+
     $self->SUPER::new( %args );
-    
+
     $self->{showInLog} = 0;
 
     return $self;
+}
+
+##
+# @Overridden
+sub getName {
+    my $self = shift;
+
+    my $ret = $self->SUPER::getName();
+    unless( $ret ) {
+        if( ref( $self ) eq 'Macrobuild::CompositeTasks::Delegating' ) {
+            $ret = 'Delegating to ' . $self->{delegate}->getName();
+        }
+    }
+    return $ret;
+}
+
+##
+# Set the delegate task
+# $task: the task to set
+sub setDelegate {
+    my $self = shift;
+    my $task = shift;
+
+    if( exists( $self->{delegate} )) {
+        warning( 'Delegating: delegate task was previously set, overriding' );
+    }
+    $self->{delegate} = $task;
+}
+
+##
+# @Overridden
+sub getSubtasks {
+    my $self = shift;
+
+    if( defined( $self->{delegate} )) {
+        return ( $self->{delegate} );
+    } else {
+        return ();
+    }
 }
 
 ##

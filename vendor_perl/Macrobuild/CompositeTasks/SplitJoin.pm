@@ -1,4 +1,4 @@
-# 
+#
 # A build Task that first runs a splitting task, then two or more parallel tasks,
 # and then a joining Task. Optionally, we can specify a specify a sequence in
 # which the parallel tasks should be processed.
@@ -42,12 +42,77 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    
+
     $self->SUPER::new( @args );
-    
+
     $self->{showInLog} = 0;
+    $self->{name}      = ref( $self );
 
     return $self;
+}
+
+##
+# Set the split task
+# $task: the task to set
+sub setSplitTask {
+    my $self     = shift;
+    my $task     = shift;
+
+    if( exists( $self->{splitTask} )) {
+        warning( 'SplitJoin: split task was previously set, overriding' );
+    }
+    $self->{splitTask} = $task;
+}
+
+##
+# Add a parallel task
+# $taskName identifier of the task to add, local to this task
+# $task: the task to add
+sub addParallelTask {
+    my $self     = shift;
+    my $taskName = shift;
+    my $task     = shift;
+
+    if( exists( $self->{parallelTasks}->{$taskName} )) {
+        warning( 'SplitJoin: parallel task exists already with this name, overriding:', $taskName );
+    }
+    $self->{parallelTasks}->{$taskName} = $task;
+
+    unless( defined( $self->{parallelTasksSequence} )) {
+        $self->{parallelTasksSequence} = [];
+    }
+    push @{$self->{parallelTasksSequence}}, $taskName;
+}
+
+##
+# Set the join task
+# $task: the task to set
+sub setJoinTask {
+    my $self     = shift;
+    my $task     = shift;
+
+    if( exists( $self->{joinTask} )) {
+        warning( 'SplitJoin: join task was previously set, overriding' );
+    }
+    $self->{joinTask} = $task;
+}
+
+##
+# @Overridden
+sub getSubtasks {
+    my $self = shift;
+
+    my @ret = ();
+    if( defined( $self->{splitTask} )) {
+        push @ret, $self->{splitTask};
+    }
+    if( defined( $self->{parallelTasks} ) && %{$self->{parallelTasks}} ) {
+        push @ret, values %{$self->{parallelTasks}};
+    }
+    if( defined( $self->{joinTask} )) {
+        push @ret, $self->{joinTask};
+    }
+    return @ret;
 }
 
 ##
@@ -112,7 +177,7 @@ sub runImpl {
                 if( $taskRet < 0 ) {
                     $ret = $taskRet;
                     if( $self->{stopOnError} ) {
-                        error( "ERROR when executing " . $run->replaceVariables( $task->name()) . ". Stopping." );
+                        error( "ERROR when executing " . $run->replaceVariables( $task->getName()) . ". Stopping." );
                         $continue = 0;
                         last;
                     }
@@ -134,7 +199,7 @@ sub runImpl {
         my $joinTask = $self->{joinTask};
         if( $joinTask ) {
             $previousChildRun = $run->createChildRun( $joinTask, $previousChildRun );
-        
+
             my $taskRet = $joinTask->run( $previousChildRun );
 
             if( $taskRet ) {
