@@ -1,4 +1,4 @@
-# 
+#
 # Looks for a certain pattern in the input, and replaces it with another
 # in the output.
 #
@@ -54,8 +54,8 @@ sub _replace {
     my $run    = shift;
     my $countP = shift;
 
-    my $pattern     = Macrobuild::Utils::replaceVariables( $self->{pattern},     $run );
-    my $replacement = Macrobuild::Utils::replaceVariables( $self->{replacement}, $run );
+    my $pattern     = $run->getProperty( 'pattern' );
+    my $replacement = $run->getProperty( 'replacement' );
 
     my $type = ref( $in );
     my $ret;

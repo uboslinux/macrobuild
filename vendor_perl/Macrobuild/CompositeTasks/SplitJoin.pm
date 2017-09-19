@@ -58,6 +58,10 @@ sub setSplitTask {
     my $self     = shift;
     my $task     = shift;
 
+    unless( $task ) {
+        error( 'SplitJoin: will not add undef split task' );
+        return;
+    }
     if( exists( $self->{splitTask} )) {
         warning( 'SplitJoin: split task was previously set, overriding' );
     }
@@ -73,6 +77,14 @@ sub addParallelTask {
     my $taskName = shift;
     my $task     = shift;
 
+    unless( $taskName ) {
+        error( 'SplitJoin: will not add unnamed parallel task' );
+        return;
+    }
+    unless( $task ) {
+        error( 'SplitJoin: will not add undef parallel task' );
+        return;
+    }
     if( exists( $self->{parallelTasks}->{$taskName} )) {
         warning( 'SplitJoin: parallel task exists already with this name, overriding:', $taskName );
     }
@@ -91,6 +103,10 @@ sub setJoinTask {
     my $self     = shift;
     my $task     = shift;
 
+    unless( $task ) {
+        error( 'SplitJoin: will not add undef join task' );
+        return;
+    }
     if( exists( $self->{joinTask} )) {
         warning( 'SplitJoin: join task was previously set, overriding' );
     }

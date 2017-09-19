@@ -1,4 +1,4 @@
-# 
+#
 # Delegates to SearchReplace.
 #
 # This file is part of macrobuild.
@@ -26,6 +26,7 @@ package TestTasks::DelegatingSearchReplace;
 use base qw( Macrobuild::CompositeTasks::Delegating );
 use fields;
 
+use Macrobuild::Task;
 use TestTasks::SearchReplace;
 use UBOS::Logging;
 
@@ -38,14 +39,22 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    
-    $self->SUPER::new( %args );
 
-    $self->{delegate} = new TestTasks::SearchReplace(
-        'name'        => 'Delegated',
-        'pattern'     => '${DelegatingSearchReplaceTestPattern}bb',
-        'replacement' => 'X',
-    );
+    $self->SUPER::new(
+            %args,
+            'setup' => sub {
+                my $run  = shift;
+                my $task = shift;
+
+                $task->setDelegate( new TestTasks::SearchReplace->new(
+                    'name'        => 'Delegated',
+                    'pattern'     => '${DelegatingSearchReplaceTestPattern}bb',
+                    'replacement' => 'X',
+                ));
+
+                return SUCCESS;
+            });
+
 
     return $self;
 }

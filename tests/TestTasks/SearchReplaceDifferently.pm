@@ -1,4 +1,4 @@
-# 
+#
 # Takes the input, runs it through three different SearchReplace tasks,
 # and puts it together.
 #
@@ -24,11 +24,11 @@ use warnings;
 
 package TestTasks::SearchReplaceDifferently;
 
-use base qw( Macrobuild::CompositeTasks::Delegating );
+use base qw( Macrobuild::CompositeTasks::SplitJoin );
 use fields;
 
-use Macrobuild::CompositeTasks::MergeValues;
-use Macrobuild::CompositeTasks::SplitJoin;
+use Macrobuild::BasicTasks::MergeValues;
+use Macrobuild::Task;
 use TestTasks::SearchReplace;
 
 ##
@@ -40,29 +40,42 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    
-    $self->SUPER::new( %args );
 
-    $self->{delegate} = Macrobuild::CompositeTasks::SplitJoin->new(
-        'name'          => 'SearchReplaceDifferently',
-        'splitTask'     => TestTasks::SearchReplace->new(
-            'pattern'     => 'a',
-            'replacement' => 'A' ),
-        'parallelTasks' => {
-            'one' => TestTasks::SearchReplace->new(
-                'pattern'     => 'A',
-                'replacement' => '1' ),
-            'two' => TestTasks::SearchReplace->new(
-                'pattern'     => 'A',
-                'replacement' => '2' ),
-            'three' => TestTasks::SearchReplace->new(
-                'pattern'     => 'A',
-                'replacement' => '3' ),
-        },
-        'joinTask'      => Macrobuild::CompositeTasks::MergeValues->new(
-            'name'        => 'MergeValues',
-            'keys'        => ['one', 'three' ] # leave out 'two' for testing purposes
-        ));
+    $self->SUPER::new(
+            %args,
+            'setup' => sub {
+                my $run  = shift;
+                my $task = shift;
+
+                $task->setSplitTask( TestTasks::SearchReplace->new(
+                        'pattern'     => 'a',
+                        'replacement' => 'A' ));
+
+                $task->addParallelTask(
+                        'one',
+                        TestTasks::SearchReplace->new(
+                                'pattern'     => 'A',
+                                'replacement' => '1' ));
+
+                $task->addParallelTask(
+                        'two',
+                        TestTasks::SearchReplace->new(
+                                'pattern'     => 'A',
+                                'replacement' => '2' ));
+
+                $task->addParallelTask(
+                        'three',
+                        TestTasks::SearchReplace->new(
+                                'pattern'     => 'A',
+                                'replacement' => '3' ));
+
+                $task->setJoinTask( Macrobuild::BasicTasks::MergeValues->new(
+                            'name'        => 'MergeValues',
+                            'keys'        => ['one', 'three' ] # leave out 'two' for testing purposes
+                        ));
+
+                return SUCCESS;
+            });
 
     return $self;
 }
