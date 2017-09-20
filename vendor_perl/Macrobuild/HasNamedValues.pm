@@ -115,22 +115,6 @@ sub getUnresolvedValue {
 }
 
 ##
-# Obtain a named value, skipping locally but traversing up to delegates
-# as needed. Variable references are not expanded.
-# This must be overridden by subclasses.
-#
-# $name: the name of the value
-# $default: the default value, if no other value can be found
-# return: the value, or undef
-sub getUnresolvedParentValue {
-    my $self    = shift;
-    my $name   = shift;
-    my $default = shift;
-
-    fatal( 'Must override:', ref( $self ) . '::getUnresolvedParentValue' );
-}
-
-##
 # Get the names of all locally named values.
 #
 # return: a list
@@ -161,6 +145,8 @@ sub replaceVariables {
 
         return undef;
     }
+    my $MAX_REPLACEMENTS = 5;
+
     my $type = ref( $s );
     if( 'ARRAY' eq $type ) {
         my @ret;
@@ -168,12 +154,14 @@ sub replaceVariables {
             my $ret = $ss;
             my $done;
 
-            for( my $i=0 ; $i<5 ; ++$i ) {
-                # expand up to 5 times
-                ( $ret, $done ) = $self->_scaryReplace( $ret, $s, $unresolvedOk, $extraDict );
+            my %replacedAlready = ();
+            for( my $i=0 ; $i<$MAX_REPLACEMENTS ; ++$i ) {
+                my %replacingNow = ();
+                ( $ret, $done ) = $self->_scaryReplace( $ret, $s, $unresolvedOk, $extraDict, \%replacedAlready, \%replacingNow );
                 if( $done ) {
                     last;
                 }
+                %replacedAlready = ( %replacedAlready, %replacingNow );
             }
             push @ret, $ret;
         }
@@ -189,20 +177,24 @@ sub replaceVariables {
             my $keyDone;
             my $valueDone;
 
-            for( my $i=0 ; $i<5 ; ++$i ) {
-                # expand up to 5 times
-                ( $newKey, $keyDone ) = $self->_scaryReplace( $newKey, $s, $unresolvedOk, $extraDict );
+            my %keysReplacedAlready = ();
+            for( my $i=0 ; $i<$MAX_REPLACEMENTS ; ++$i ) {
+                my %replacingNow = ();
+                ( $newKey, $keyDone ) = $self->_scaryReplace( $newKey, $s, $unresolvedOk, $extraDict, \%keysReplacedAlready, \%replacingNow );
                 if( $keyDone ) {
                     last;
                 }
+                %keysReplacedAlready = ( %keysReplacedAlready, %replacingNow );
             }
 
-            for( my $i=0 ; $i<5 ; ++$i ) {
-                # expand up to 5 times
-                ( $newValue, $valueDone ) = $self->_scaryReplace( $newValue, $s, $unresolvedOk, $extraDict );
+            my %valuesReplacedAlready = ();
+            for( my $i=0 ; $i<$MAX_REPLACEMENTS ; ++$i ) {
+                my %replacingNow = ();
+                ( $newValue, $valueDone ) = $self->_scaryReplace( $newValue, $s, $unresolvedOk, $extraDict, \%valuesReplacedAlready, \%replacingNow );
                 if( $valueDone ) {
                     last;
                 }
+                %valuesReplacedAlready = ( %valuesReplacedAlready, %replacingNow );
             }
             $ret{$newKey} = $newValue;
         }
@@ -213,12 +205,14 @@ sub replaceVariables {
         my $ret = $s;
         my $done;
 
-        for( my $i=0 ; $i<5 ; ++$i ) {
-            # expand up to 5 times
-            ( $ret, $done ) = $self->_scaryReplace( $ret, $s, $unresolvedOk, $extraDict );
+        my %replacedAlready = ();
+        for( my $i=0 ; $i<$MAX_REPLACEMENTS ; ++$i ) {
+            my %replacingNow = ();
+            ( $ret, $done ) = $self->_scaryReplace( $ret, $s, $unresolvedOk, $extraDict, \%replacedAlready, \%replacingNow );
             if( $done ) {
                 last;
             }
+            %replacedAlready = ( %replacedAlready, %replacingNow );
         }
 
         return $ret;
@@ -228,15 +222,18 @@ sub replaceVariables {
 ##
 # Isolate the scary regex.
 sub _scaryReplace {
-    my $self         = shift;
-    my $current      = shift;
-    my $s            = shift;
-    my $unresolvedOk = shift;
-    my $extraDict    = shift;
+    my $self            = shift;
+    my $current         = shift;
+    my $s               = shift;
+    my $unresolvedOk    = shift;
+    my $extraDict       = shift;
+    my $replacedAlready = shift;
+    my $replacingNow    = shift;
 
     my $ret = $current;
-    $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->_replacement( $1, $s, $unresolvedOk, $extraDict )/ge;
-    if( $ret =~ m!\$\{^?! ) { # dear Perl: really! This time no \ in front of ?
+    $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->_replacement( $1, $s, $unresolvedOk, $extraDict, $replacedAlready, $replacingNow )/ge;
+
+    if( $ret =~ m!\$\{[^?]! ) {
         return( $ret, 0 );
     } else {
         return( $ret, 1 );
@@ -249,20 +246,30 @@ sub _scaryReplace {
 # $s: the string containing the variables
 # $unresolvedOk: return string containing unresolved variables if not all variables could be replaced
 # $extraDict: hack to allow one more variable to be defined
+# $replacedAlready: to avoid loops in definitions, this tracks the variables replaced in previous passes
+# $replacingNow: to avoid loops in definitions, this tracks the variables replaced in the current pass
 # return: the replacement string
 sub _replacement {
-    my $self         = shift;
-    my $matched      = shift;
-    my $s            = shift;
-    my $unresolvedOk = shift;
-    my $extraDict    = shift;
+    my $self            = shift;
+    my $matched         = shift;
+    my $s               = shift;
+    my $unresolvedOk    = shift;
+    my $extraDict       = shift;
+    my $replacedAlready = shift;
+    my $replacingNow    = shift;
+
+    if( exists( $replacedAlready->{$matched} )) {
+        error( 'Recursive definition encountered when attempting to resolve variable:', $matched );
+        return '${? ' . $matched . '}';
+    }
+    $replacingNow->{$matched} += 1;
 
     my $ret = undef;
     if( $extraDict && exists( $extraDict->{$matched} )) {
         $ret = $extraDict->{$matched};
     }
     unless( defined( $ret )) {
-        $ret = $self->getUnresolvedParentValue( $matched );
+        $ret = $self->getParentResolver()->getUnresolvedValue( $matched );
     }
     # we cannot replace things that aren't strings or aren't 1-length arrays
     if( defined( $ret )) {
@@ -301,6 +308,18 @@ sub _replacement {
     }
     return $ret;
 }
+
+##
+# Conundrum: in Constants, ${foo} is resolved against the same scope.
+# In TaskRuns, ${foo} is only resolved against the parent scope. We
+# solve this through this indirection:
+# return: the resolver to resolve against
+sub getParentResolver {
+    my $self = shift;
+
+    fatal( 'Must override:', ref( $self ) . '::getUnresolvedValue' );
+}
+
 
 1;
 

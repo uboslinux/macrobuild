@@ -140,8 +140,8 @@ sub getProperty {
     my $name = shift;
 
     my $ret = $self->{task}->getProperty( $name );
-    if( defined( $ret )) {
-        $ret = $self->replaceVariables( $ret );
+    if( defined( $ret ) && $self->{delegate} ) {
+        $ret = $self->{delegate}->replaceVariables( $ret ); # one level up
     } else {
         fatal( 'No such property value found:', $name, '. Task:', $self->{task}->getName() );
     }
@@ -187,16 +187,10 @@ sub getUnresolvedValue {
 
 ##
 # @Overridden
-sub getUnresolvedParentValue {
-    my $self    = shift;
-    my $name    = shift;
-    my $default = shift;
+sub getParentResolver {
+    my $self = shift;
 
-    my $ret = $self->{task}->getUnresolvedTaskConstantOrDefault( $name, undef );
-    unless( defined( $ret )) {
-        $ret = $self->{delegate}->getUnresolvedValue( $name, $default );
-    }
-    return $ret;
+    return $self->{delegate};
 }
 
 ##

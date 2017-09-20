@@ -30,6 +30,7 @@ use UBOS::Logging;
 
 use base qw( Macrobuild::HasNamedValues );
 use fields qw( name vars );
+use overload;
 
 ##
 # Constructor
@@ -101,23 +102,6 @@ sub getUnresolvedValue {
 
 ##
 # @Overridden
-sub getUnresolvedParentValue {
-    my $self    = shift;
-    my $name   = shift;
-    my $default = shift;
-
-    my $ret;
-    if( defined( $self->{delegate} )) {
-        $ret = $self->{delegate}->getUnresolvedValue( $name, $default );
-
-    } else {
-        $ret = $default;
-    }
-    return $ret;
-}
-
-##
-# @Overridden
 sub getLocalValueNames {
     my $self = shift;
 
@@ -178,6 +162,14 @@ sub getAllNamedValuesWithAllValues {
         $self->{delegate}->getAllNamedValuesWithAllValues( $resolve, $insertHere );
     }
     return $insertHere;
+}
+
+##
+# @Overridden
+sub getParentResolver {
+    my $self = shift;
+
+    return $self;
 }
 
 1;
