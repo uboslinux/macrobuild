@@ -145,76 +145,31 @@ sub replaceVariables {
 
         return undef;
     }
-    my $MAX_REPLACEMENTS = 5;
 
     my $type = ref( $s );
     if( 'ARRAY' eq $type ) {
         my @ret;
         foreach my $ss ( @$s ) {
-            my $ret = $ss;
-            my $done;
+            my $ret = $self->_scaryReplace( $ss, $s, $unresolvedOk, $extraDict );
 
-            my %replacedAlready = ();
-            for( my $i=0 ; $i<$MAX_REPLACEMENTS ; ++$i ) {
-                my %replacingNow = ();
-                ( $ret, $done ) = $self->_scaryReplace( $ret, $s, $unresolvedOk, $extraDict, \%replacedAlready, \%replacingNow );
-                if( $done ) {
-                    last;
-                }
-                %replacedAlready = ( %replacedAlready, %replacingNow );
-            }
             push @ret, $ret;
         }
-
         return \@ret;
 
     } elsif( 'HASH' eq $type ) {
         my %ret;
         foreach my $key ( sort keys %$s ) {
             my $value    = $s->{$key};
-            my $newKey   = $key;
-            my $newValue = $value;
-            my $keyDone;
-            my $valueDone;
 
-            my %keysReplacedAlready = ();
-            for( my $i=0 ; $i<$MAX_REPLACEMENTS ; ++$i ) {
-                my %replacingNow = ();
-                ( $newKey, $keyDone ) = $self->_scaryReplace( $newKey, $s, $unresolvedOk, $extraDict, \%keysReplacedAlready, \%replacingNow );
-                if( $keyDone ) {
-                    last;
-                }
-                %keysReplacedAlready = ( %keysReplacedAlready, %replacingNow );
-            }
+            my $newKey   = $self->_scaryReplace( $key,   $s, $unresolvedOk, $extraDict );
+            my $newValue = $self->_scaryReplace( $value, $s, $unresolvedOk, $extraDict );
 
-            my %valuesReplacedAlready = ();
-            for( my $i=0 ; $i<$MAX_REPLACEMENTS ; ++$i ) {
-                my %replacingNow = ();
-                ( $newValue, $valueDone ) = $self->_scaryReplace( $newValue, $s, $unresolvedOk, $extraDict, \%valuesReplacedAlready, \%replacingNow );
-                if( $valueDone ) {
-                    last;
-                }
-                %valuesReplacedAlready = ( %valuesReplacedAlready, %replacingNow );
-            }
             $ret{$newKey} = $newValue;
         }
-
         return \%ret;
 
     } else {
-        my $ret = $s;
-        my $done;
-
-        my %replacedAlready = ();
-        for( my $i=0 ; $i<$MAX_REPLACEMENTS ; ++$i ) {
-            my %replacingNow = ();
-            ( $ret, $done ) = $self->_scaryReplace( $ret, $s, $unresolvedOk, $extraDict, \%replacedAlready, \%replacingNow );
-            if( $done ) {
-                last;
-            }
-            %replacedAlready = ( %replacedAlready, %replacingNow );
-        }
-
+        my $ret = $self->_scaryReplace( $s, $s, $unresolvedOk, $extraDict );
         return $ret;
     }
 }
@@ -227,17 +182,22 @@ sub _scaryReplace {
     my $s               = shift;
     my $unresolvedOk    = shift;
     my $extraDict       = shift;
-    my $replacedAlready = shift;
-    my $replacingNow    = shift;
 
+    my $MAX_REPLACEMENTS = 5;
+
+    my %replacedAlready = ();
     my $ret = $current;
-    $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->_replacement( $1, $s, $unresolvedOk, $extraDict, $replacedAlready, $replacingNow )/ge;
+    for( my $i=0 ; $i<$MAX_REPLACEMENTS ; ++$i ) {
+        my %replacingNow = ();
+        $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->_replacement( $1, $s, $unresolvedOk, $extraDict, \%replacedAlready, \%replacingNow )/ge;
 
-    if( $ret =~ m!\$\{[^?]! ) {
-        return( $ret, 0 );
-    } else {
-        return( $ret, 1 );
+        if( $ret !~ m!\$\{[^?]! ) {
+            last;
+        }
+
+        %replacedAlready = ( %replacedAlready, %replacingNow );
     }
+    return $ret;
 }
 
 ##

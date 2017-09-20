@@ -204,7 +204,7 @@ sub _parseArgvToTask {
             if( $currentTaskName ) { # we just finished parsing a task
                 my %mergedVars;
                 if( $sharedVars ) {
-                    %mergedVars = ( %$currentVars, %$sharedVars );
+                    %mergedVars = ( %$sharedVars , %$currentVars ); # current overwrites shared
                 } else {
                     %mergedVars = ( %$currentVars );
                 }
@@ -228,7 +228,7 @@ sub _parseArgvToTask {
     if( $currentTaskName ) {
         my %mergedVars;
         if( $sharedVars ) {
-            %mergedVars = ( %$currentVars, %$sharedVars );
+            %mergedVars = ( %$sharedVars , %$currentVars ); # current overwrites shared
         } else {
             %mergedVars = ( %$currentVars );
         }
