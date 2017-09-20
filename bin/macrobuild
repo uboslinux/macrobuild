@@ -149,13 +149,8 @@ if( $listShortcuts ) {
 
 my $rootTask = _parseArgvToTask( \@ARGV, $constants );
 
-if( $dryRun ) {
-    _printTaskRecursively( $rootTask );
-    exit 0;
-}
-
 my $taskRun = Macrobuild::TaskRun->new( $inputJson, $constants, $rootTask );
-my $exit    = $rootTask->run( $taskRun );
+my $exit    = $rootTask->run( $taskRun, $dryRun );
 
 if( $exit < 0 ) {
     error( 'Aborting with error' );
@@ -179,7 +174,7 @@ sub _parseArgvToTask {
     my $globalConstants  = shift;
 
     my $retTask          = undef;
-    my $retTaskConstants = undef;
+    my $sharedVars       = undef; # The ones before the first task has been mentioned
     my $currentTaskName  = undef;
     my $currentVars      = {};
 
@@ -203,13 +198,18 @@ sub _parseArgvToTask {
             }
         } else {
             if( !$currentTaskName && %$currentVars ) { # we don't have a task yet (just about to get one), so this is env vars
-                $retTaskConstants = Macrobuild::Constants->new(
-                        'env vars for ' . join( ' ', @$args ),
-                        $currentVars );
+                $sharedVars  = $currentVars;
                 $currentVars = {};
             }
             if( $currentTaskName ) { # we just finished parsing a task
-                my $newTask = _createTask( $currentTaskName, $currentVars, $globalConstants );
+                my %mergedVars;
+                if( $sharedVars ) {
+                    %mergedVars = ( %$currentVars, %$sharedVars );
+                } else {
+                    %mergedVars = ( %$currentVars );
+                }
+
+                my $newTask = _createTask( $currentTaskName, \%mergedVars, $globalConstants );
                 if( $retTask ) {
                     unless( ref $retTask eq 'Macrobuild::CompositeTasks::Sequential' ) {
                         $retTask = Macrobuild::CompositeTasks::Sequential->new( 'tasks' => [ $retTask ] );
@@ -226,7 +226,13 @@ sub _parseArgvToTask {
         }
     }
     if( $currentTaskName ) {
-        my $newTask = _createTask( $currentTaskName, $currentVars, $globalConstants );
+        my %mergedVars;
+        if( $sharedVars ) {
+            %mergedVars = ( %$currentVars, %$sharedVars );
+        } else {
+            %mergedVars = ( %$currentVars );
+        }
+        my $newTask = _createTask( $currentTaskName, \%mergedVars, $globalConstants );
         if( $retTask ) {
             unless( ref $retTask eq 'Macrobuild::CompositeTasks::Sequential' ) {
                 $retTask = Macrobuild::CompositeTasks::Sequential->new( 'tasks' => [ $retTask ] );
@@ -237,10 +243,6 @@ sub _parseArgvToTask {
         }
     } else {
         fatal( 'No task name(s) given' );
-    }
-
-    if( $retTaskConstants ) {
-        $retTask->setTaskConstants( $retTaskConstants );
     }
 
     return $retTask;
@@ -282,31 +284,6 @@ sub _createTask {
     return $ret;
 }
 
-####
-sub _printTaskRecursively {
-    my $task            = shift;
-    my $remainingLevels = shift || -1;
-    my $indent          = shift || '';
-
-    my $taskName;
-    if( $task ) {
-        $taskName = $task->getName();
-    } else {
-        $taskName = 'NULL-TASK';
-    }
-    unless( $taskName ) {
-        $taskName = ref( $task );
-    }
-    print "$indent$taskName\n";
-
-    if( $task && ( $remainingLevels == -1 || --$remainingLevels > 0 )) {
-        my $subindent = $indent . '  ';
-        my @subtasks  = $task->getSubtasks();
-        foreach my $subtask ( @subtasks ) {
-            _printTaskRecursively( $subtask, $remainingLevels, $subindent );
-        }
-    }
-}
 
 #####
 sub _var2string {
@@ -347,9 +324,8 @@ macrobuild can be invoked as follows:
         until the next task is listed. Any number of tasks may be listed.
 
     macrobuild <key0=value0> <task1> <key1>=<value1> ... <task2> <key2>=<value2> ...
-        Run as before, but temporarily set the value of <key0> to <value0>.
-        This is typically used to override a value in settings.pl or
-        local.pl for this run only.
+        Run as before, but set the value of <key0> to <value0> for all
+        listed tasks. This is a shorthand notation.
 
 The following optional arguments can be provided:
 

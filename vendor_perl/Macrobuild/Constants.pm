@@ -30,7 +30,7 @@ use UBOS::Logging;
 
 use base qw( Macrobuild::HasNamedValues );
 use fields qw( name vars );
-use overload;
+use overload q{""} => 'toString';
 
 ##
 # Constructor
@@ -125,7 +125,7 @@ sub getAllValues {
     if( exists( $self->{vars}->{$name} )) {
         my $value = $self->{vars}->{$name};
         if( $resolve ) {
-            $value = Macrobuild::Utils::replaceVariables( $value, $self, 1 );
+            $value = Macrobuild::Utils::replaceVariables( $value, $self, undef, 1 );
         }
         push @{$appendHere}, $value;
     }
@@ -154,7 +154,7 @@ sub getAllNamedValuesWithAllValues {
             $insertHere->{$key} = [];
         }
         if( $resolve ) {
-            $value = Macrobuild::Utils::replaceVariables( $value, $self, 1 );
+            $value = Macrobuild::Utils::replaceVariables( $value, $self, undef, 1 );
         }
         push @{$insertHere->{$key}}, $value;
     }
@@ -165,11 +165,14 @@ sub getAllNamedValuesWithAllValues {
 }
 
 ##
-# @Overridden
-sub getParentResolver {
+# Convert to string
+# return string
+sub toString {
     my $self = shift;
 
-    return $self;
+    my $ret = overload::StrVal( $self ) . '( name="' . $self->getName();
+    $ret .= '" )';
+    return $ret;
 }
 
 1;

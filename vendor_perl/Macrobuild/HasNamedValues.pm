@@ -129,14 +129,14 @@ sub getLocalValueNames {
 # the syntax '${xxx}' where 'xxx' is the variable name. If '$' is
 # preceded by a backslash, this occurrence is skipped.
 # $s: the string containing the references to the variables
-# $unresolvedOk: return string containing unresolved variables if not all variables could be replaced
 # $extraDict: hack to allow one more variable to be defined
+# $unresolvedOk: return string containing unresolved variables if not all variables could be replaced
 # return: the string with variables returned, or undef
 sub replaceVariables {
     my $self         = shift;
     my $s            = shift;
-    my $unresolvedOk = shift;
     my $extraDict    = shift;
+    my $unresolvedOk = shift;
 
     unless( defined( $s )) {
         error( 'Cannot replace variables in undef' );
@@ -269,7 +269,7 @@ sub _replacement {
         $ret = $extraDict->{$matched};
     }
     unless( defined( $ret )) {
-        $ret = $self->getParentResolver()->getUnresolvedValue( $matched );
+        $ret = $self->getUnresolvedValue( $matched );
     }
     # we cannot replace things that aren't strings or aren't 1-length arrays
     if( defined( $ret )) {
@@ -308,18 +308,6 @@ sub _replacement {
     }
     return $ret;
 }
-
-##
-# Conundrum: in Constants, ${foo} is resolved against the same scope.
-# In TaskRuns, ${foo} is only resolved against the parent scope. We
-# solve this through this indirection:
-# return: the resolver to resolve against
-sub getParentResolver {
-    my $self = shift;
-
-    fatal( 'Must override:', ref( $self ) . '::getUnresolvedValue' );
-}
-
 
 1;
 

@@ -31,7 +31,6 @@ use UBOS::Logging;
 use UBOS::Utils;
 use overload q{""} => 'toString';
 
-
 ##
 # Constructor.
 # $input: has of input data for this task run
@@ -62,11 +61,15 @@ sub new {
 sub getName {
     my $self = shift;
 
-    my $taskName = $self->{task}->getName();
-    if( $taskName ) {
-        return 'TaskRun for ' . $taskName;
+    if( defined( $self->{task} )) {
+        my $taskName = $self->{task}->getName();
+        if( $taskName ) {
+            return 'TaskRun for ' . $taskName;
+        } else {
+            return 'TaskRun for unnamed task of type ' . ref( $self->{task} );
+        }
     } else {
-        return 'TaskRun for unnamed task of type ' . ref( $self->{task} );
+        return 'TaskRun for undef Task';
     }
 }
 
@@ -183,14 +186,6 @@ sub getUnresolvedValue {
         $ret = $self->{delegate}->getUnresolvedValue( $name, $default );
     }
     return $ret;
-}
-
-##
-# @Overridden
-sub getParentResolver {
-    my $self = shift;
-
-    return $self->{delegate};
 }
 
 ##

@@ -23,7 +23,7 @@ use warnings;
 
 package Macrobuild::Task;
 
-use fields qw( name setup taskConstants stopOnError showInLog );
+use fields qw( name setup stopOnError showInLog );
 
 use UBOS::Logging;
 use overload q{""} => 'toString';
@@ -78,36 +78,6 @@ sub getSubtasks {
 }
 
 ##
-# Get the value of a constant attached to this task, which are not properties.
-# $name: the name of the constant
-# $default: the default value, if not found
-# return: the constant
-sub getUnresolvedTaskConstantOrDefault {
-    my $self    = shift;
-    my $name    = shift;
-    my $default = shift;
-
-    if( defined( $self->{taskConstants} )) {
-        return $self->{taskConstants}->getUnresolvedValue( $name, $default );
-    } else {
-        return $default;
-    }
-}
-
-##
-# Set the constants attached to this task.
-# $constants: the constants
-sub setTaskConstants {
-    my $self      = shift;
-    my $constants = shift;
-
-    if( defined( $self->{taskConstants} )) {
-        fatal( 'Have task constants already' );
-    }
-    $self->{taskConstants} = $constants;
-}
-
-##
 # Get a value that's locally specificied in this instance of Task
 # @param name the name of the value
 # return: the value, or undef
@@ -157,10 +127,12 @@ sub showInLog {
 ##
 # Run this task.
 # $run: the TaskRun object for the run
+# $dry: if true, dry-run, do not run
 # return value: SUCCESS, FAIL, or DONE_NOTHING
 sub run {
     my $self = shift;
     my $run  = shift;
+    my $dry  = shift;
 
     if( defined( $self->{setup} )) {
         debugAndSuspend( 'About to setup task:', $self, 'with', $run );
@@ -173,15 +145,51 @@ sub run {
         }
     }
 
-    debugAndSuspend( 'About to run task:', $self, 'with', $run );
-    trace( '++ About to run task:', $self );
+    if( $dry ) {
+        $self->_printRecursively();
 
-    my $ret = $self->runImpl( $run );
+        return DONE_NOTHING();
 
-    debugAndSuspend( 'Done running task:', $self, 'with', $run, 'return code', $ret );
+    } else {
+        debugAndSuspend( 'About to run task:', $self, 'with', $run );
+        trace( '++ About to run task:', $self );
 
-    return $ret;
+        my $ret = $self->runImpl( $run );
+
+        debugAndSuspend( 'Done running task:', $self, 'with', $run, 'return code', $ret );
+
+        return $ret;
+    }
 }
+
+##
+# Hierarchically print this task and its subtasks
+# $remainingLevels: the maximum number of levels to print from here, or -1 for all
+# $indent: current identation level
+sub _printRecursively {
+    my $self            = shift;
+    my $remainingLevels = shift || -1;
+    my $indent          = shift || '';
+
+    my $taskName = $self->getName();
+    unless( $taskName ) {
+        $taskName = ref( $self );
+    }
+    print "$indent$taskName";
+    if( UBOS::Logging::isTraceActive()) {
+        print " (vars: " . join( ', ', map { "'$_' => '" . ( $self->{$_} || 'undef' ) . "'" } keys %$self ) . ")";
+    }
+    print "\n";
+
+    if( $remainingLevels == -1 || --$remainingLevels > 0 ) {
+        my $subindent = $indent . '  ';
+        my @subtasks  = $self->getSubtasks();
+        foreach my $subtask ( @subtasks ) {
+            _printRecursively( $subtask, $remainingLevels, $subindent );
+        }
+    }
+}
+
 
 ##
 # Setup the task to be ready for running. By default, this does nothing.

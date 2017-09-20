@@ -24,7 +24,7 @@ use warnings;
 package TestTasks::DelegatingSearchReplace;
 
 use base qw( Macrobuild::CompositeTasks::Delegating );
-use fields;
+use fields qw( DelegatingSearchReplaceTestPattern );
 
 use Macrobuild::Task;
 use TestTasks::SearchReplace;

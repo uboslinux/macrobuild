@@ -1,1 +1,3 @@
 macrobuild-*.pkg*
+src/
+pkg/
