@@ -151,7 +151,7 @@ sub runImpl {
             if( $taskRet < 0 ) {
                 $ret = $taskRet;
                 if( $self->{stopOnError} ) {
-                    error( "ERROR when executing " . $run->replaceVariables( $splitTask->name()) . ". Stopping." );
+                    error( "ERROR when executing " . $run->replaceVariables( $splitTask->getName()) . ". Stopping." );
                     $continue = 0;
                 }
             } else { # >0
@@ -222,7 +222,7 @@ sub runImpl {
                 if( $taskRet < 0 ) {
                     $ret = $taskRet;
                     if( $self->{stopOnError} ) {
-                        error( "ERROR when executing " . $run->replaceVariables( $joinTask->name()) . ". Stopping." );
+                        error( "ERROR when executing " . $run->replaceVariables( $joinTask->getName()) . ". Stopping." );
                         $continue = 0;
                     }
                 } else { # >0

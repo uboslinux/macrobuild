@@ -180,9 +180,6 @@ sub getUnresolvedValue {
 
     my $ret = $self->{task}->getPropertyOrDefault( $name, undef );
     unless( defined( $ret )) {
-        $ret = $self->{task}->getUnresolvedTaskConstantOrDefault( $name, undef );
-    }
-    unless( defined( $ret )) {
         $ret = $self->{delegate}->getUnresolvedValue( $name, $default );
     }
     return $ret;

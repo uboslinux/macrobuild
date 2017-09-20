@@ -102,7 +102,7 @@ sub runImpl {
         return $ret;
 
     } else {
-        error( "No delegate defined for delegating task", $self->name );
+        error( "No delegate defined for delegating task", $self->getName() );
         return $self->FAIL;
     }
 }

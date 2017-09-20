@@ -22,7 +22,7 @@ check() {
             'test4-delegating.pl' \
     ; do
         echo Running test $t
-        perl $t
+        perl -I ../vendor_perl $t
     done
 }
 

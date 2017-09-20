@@ -47,6 +47,7 @@ sub new {
     for( my $i=0; $i<@args ; $i+=2 ) {
         eval {
             $self->{$args[$i]} = $args[$i+1];
+            1; # otherwise we can't set Undef
         } || fatal( 'Cannot assign: there is no property "' . $args[$i] . '" on objects of type', ref( $self ));
     }
     return $self;
