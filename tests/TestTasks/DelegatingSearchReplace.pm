@@ -46,7 +46,7 @@ sub new {
                 my $run  = shift;
                 my $task = shift;
 
-                $task->setDelegate( new TestTasks::SearchReplace->new(
+                $task->setDelegate( TestTasks::SearchReplace->new(
                     'name'        => 'Delegated',
                     'pattern'     => '${DelegatingSearchReplaceTestPattern}bb',
                     'replacement' => 'X',
