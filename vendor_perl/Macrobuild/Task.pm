@@ -66,7 +66,7 @@ sub setResolver {
     $self->SUPER::setResolver( $resolver ); # may fatal out
 
     if( $resolver ) {
-        foreach my $key ( keys %$self ) {
+        foreach my $key ( grep { ! /^_/ } keys %$self ) {
             my $value    = $self->{$key};
             if( $value ) {
                 my $newValue = $resolver->replaceVariables( $value );
@@ -161,8 +161,8 @@ sub getValueOrDefault {
     if( exists( $self->{$name} ) && defined( $self->{$name} )) {
         $ret = $self->{$name};
 
-    } elsif( defined( $self->{resolver} )) {
-        $ret = $self->{resolver}->getValueOrDefault( $name, $default );
+    } elsif( defined( $self->getResolver() )) {
+        $ret = $self->getResolver()->getValueOrDefault( $name, $default );
 
     } else {
         $ret = $default;

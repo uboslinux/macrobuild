@@ -29,7 +29,7 @@ use warnings;
 package Macrobuild::CompositeTasks::SplitJoin;
 
 use base qw( Macrobuild::Task );
-use fields qw( splitTask parallelTasks parallelTasksSequence joinTask );
+use fields qw( _splitTask _parallelTasks _parallelTasksSequence _joinTask );
 
 use UBOS::Logging;
 
@@ -62,10 +62,10 @@ sub setSplitTask {
         error( 'SplitJoin: will not add undef split task' );
         return;
     }
-    if( exists( $self->{splitTask} )) {
+    if( exists( $self->{_splitTask} )) {
         warning( 'SplitJoin: split task was previously set, overriding' );
     }
-    $self->{splitTask} = $task;
+    $self->{_splitTask} = $task;
 }
 
 ##
@@ -85,15 +85,15 @@ sub addParallelTask {
         error( 'SplitJoin: will not add undef parallel task' );
         return;
     }
-    if( exists( $self->{parallelTasks}->{$taskName} )) {
+    if( exists( $self->{_parallelTasks}->{$taskName} )) {
         warning( 'SplitJoin: parallel task exists already with this name, overriding:', $taskName );
     }
-    $self->{parallelTasks}->{$taskName} = $task;
+    $self->{_parallelTasks}->{$taskName} = $task;
 
-    unless( defined( $self->{parallelTasksSequence} )) {
-        $self->{parallelTasksSequence} = [];
+    unless( defined( $self->{_parallelTasksSequence} )) {
+        $self->{_parallelTasksSequence} = [];
     }
-    push @{$self->{parallelTasksSequence}}, $taskName;
+    push @{$self->{_parallelTasksSequence}}, $taskName;
 }
 
 ##
@@ -107,10 +107,10 @@ sub setJoinTask {
         error( 'SplitJoin: will not add undef join task' );
         return;
     }
-    if( exists( $self->{joinTask} )) {
+    if( exists( $self->{_joinTask} )) {
         warning( 'SplitJoin: join task was previously set, overriding' );
     }
-    $self->{joinTask} = $task;
+    $self->{_joinTask} = $task;
 }
 
 ##
@@ -119,14 +119,14 @@ sub getSubtasks {
     my $self = shift;
 
     my @ret = ();
-    if( defined( $self->{splitTask} )) {
-        push @ret, $self->{splitTask};
+    if( defined( $self->{_splitTask} )) {
+        push @ret, $self->{_splitTask};
     }
-    if( defined( $self->{parallelTasks} ) && %{$self->{parallelTasks}} ) {
-        push @ret, values %{$self->{parallelTasks}};
+    if( defined( $self->{_parallelTasks} ) && %{$self->{_parallelTasks}} ) {
+        push @ret, values %{$self->{_parallelTasks}};
     }
-    if( defined( $self->{joinTask} )) {
-        push @ret, $self->{joinTask};
+    if( defined( $self->{_joinTask} )) {
+        push @ret, $self->{_joinTask};
     }
     return @ret;
 }
@@ -142,7 +142,7 @@ sub runImpl {
 
     my $previousChildRun = undef;
 
-    my $splitTask = $self->{splitTask};
+    my $splitTask = $self->{_splitTask};
     if( $splitTask ) {
         $previousChildRun = $run->createChildRun( $splitTask );
         my $taskRet       = $splitTask->run( $previousChildRun );
@@ -166,9 +166,9 @@ sub runImpl {
         # determine, check and clean up tasks sequence
         my %inSequence   = ();
         my @realSequence = ();
-        if( defined( $self->{parallelTasksSequence} )) {
-            foreach my $task ( @{$self->{parallelTasksSequence}} ) {
-                if( !exists( $self->{parallelTasks}->{$task} )) {
+        if( defined( $self->{_parallelTasksSequence} )) {
+            foreach my $task ( @{$self->{_parallelTasksSequence}} ) {
+                if( !exists( $self->{_parallelTasks}->{$task} )) {
                     warning( 'Task', $task, 'specified in parallelTasksSequence does not exist in parallelTasks. Ignoring.' );
                 } elsif( defined( $inSequence{$task} )) {
                     warning( 'Task', $task, 'specified more than once in parallelTasksSequence. Ignoring second occurrence.' );
@@ -179,12 +179,12 @@ sub runImpl {
             }
         }
         # put in the remaining tasks in a predictable sequence
-        map { my $t = $_; unless( exists( $inSequence{$t} )) { push @realSequence, $t; } } sort keys %{$self->{parallelTasks}};
+        map { my $t = $_; unless( exists( $inSequence{$t} )) { push @realSequence, $t; } } sort keys %{$self->{_parallelTasks}};
 
         my $outData = {};
 
         foreach my $taskName ( @realSequence ) {
-            my $task = $self->{parallelTasks}->{$taskName};
+            my $task = $self->{_parallelTasks}->{$taskName};
 
             my $childRun = $run->createChildRun( $task, $previousChildRun );
             my $taskRet  = $task->run( $childRun );
@@ -212,7 +212,7 @@ sub runImpl {
         $previousChildRun->setOutput( $outData );
     }
     if( $continue ) {
-        my $joinTask = $self->{joinTask};
+        my $joinTask = $self->{_joinTask};
         if( $joinTask ) {
             $previousChildRun = $run->createChildRun( $joinTask, $previousChildRun );
 

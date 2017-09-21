@@ -212,8 +212,8 @@ sub _parseArgvToTask {
                 my $newTask = _createTask( $currentTaskName, \%mergedVars );
                 if( $retTask ) {
                     unless( ref $retTask eq 'Macrobuild::CompositeTasks::Sequential' ) {
-                        my $newRetTask = Macrobuild::CompositeTasks::Sequential->new(
-                                'tasks' => [ $retTask ] );
+                        my $newRetTask = Macrobuild::CompositeTasks::Sequential->new();
+                        $newRetTask->appendTask( $retTask );
                         $retTask = $newRetTask;
                     }
                     $retTask->appendTask( $newTask );
@@ -237,8 +237,8 @@ sub _parseArgvToTask {
         my $newTask = _createTask( $currentTaskName, \%mergedVars );
         if( $retTask ) {
             unless( ref $retTask eq 'Macrobuild::CompositeTasks::Sequential' ) {
-                my $newRetTask = Macrobuild::CompositeTasks::Sequential->new(
-                        'tasks' => [ $retTask ] );
+                my $newRetTask = Macrobuild::CompositeTasks::Sequential->new();
+                $newRetTask->appendTask( $retTask );
                 $retTask = $newRetTask;
             }
             $retTask->appendTask( $newTask );

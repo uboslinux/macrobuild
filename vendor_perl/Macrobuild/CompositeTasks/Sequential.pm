@@ -24,7 +24,7 @@ use warnings;
 package Macrobuild::CompositeTasks::Sequential;
 
 use base qw( Macrobuild::Task );
-use fields qw( tasks );
+use fields qw( _tasks );
 
 use UBOS::Logging;
 
@@ -40,7 +40,7 @@ sub new {
 
     $self->{showInLog} = 0;
     $self->{name}      = ref( $self );
-    $self->{tasks}     = [];
+    $self->{_tasks}    = [];
 
     $self->SUPER::new( @args );
 
@@ -54,7 +54,7 @@ sub appendTask {
     my $self = shift;
     my $task = shift;
 
-    push @{$self->{tasks}}, $task;
+    push @{$self->{_tasks}}, $task;
 }
 
 ##
@@ -62,7 +62,7 @@ sub appendTask {
 sub getSubtasks {
     my $self = shift;
 
-    return @{$self->{tasks}};
+    return @{$self->{_tasks}};
 }
 
 ##
@@ -73,7 +73,7 @@ sub runImpl {
 
     my $previousChildRun = undef;
     my $ret = 0;
-    foreach my $childTask ( @{$self->{tasks}} ) {
+    foreach my $childTask ( @{$self->{_tasks}} ) {
 
         my $childRun = $run->createChildRun( $childTask, $previousChildRun );
 

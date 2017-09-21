@@ -91,8 +91,8 @@ sub getValueOrDefault {
     if( exists( $self->{vars}->{$name} ) && defined( $self->{vars}->{$name} )) {
         $ret = $self->{vars}->{$name};
 
-    } elsif( defined( $self->{resolver} )) {
-        $ret = $self->{resolver}->getValueOrDefault( $name, $default );
+    } elsif( defined( $self->getResolver() )) {
+        $ret = $self->getResolver()->getValueOrDefault( $name, $default );
 
     } else {
         $ret = $default;

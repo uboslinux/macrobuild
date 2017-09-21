@@ -25,7 +25,7 @@ use warnings;
 package Macrobuild::CompositeTasks::Delegating;
 
 use base qw( Macrobuild::Task );
-use fields qw( delegate );
+use fields qw( _delegate );
 
 use UBOS::Logging;
 
@@ -54,7 +54,7 @@ sub getName {
     my $ret = $self->SUPER::getName();
     unless( $ret ) {
         if( ref( $self ) eq 'Macrobuild::CompositeTasks::Delegating' ) {
-            $ret = 'Delegating to ' . $self->{delegate}->getName();
+            $ret = 'Delegating to ' . $self->{_delegate}->getName();
         }
     }
     return $ret;
@@ -67,10 +67,10 @@ sub setDelegate {
     my $self = shift;
     my $task = shift;
 
-    if( exists( $self->{delegate} )) {
+    if( exists( $self->{_delegate} )) {
         warning( 'Delegating: delegate task was previously set, overriding' );
     }
-    $self->{delegate} = $task;
+    $self->{_delegate} = $task;
 }
 
 ##
@@ -78,8 +78,8 @@ sub setDelegate {
 sub getSubtasks {
     my $self = shift;
 
-    if( defined( $self->{delegate} )) {
-        return ( $self->{delegate} );
+    if( defined( $self->{_delegate} )) {
+        return ( $self->{_delegate} );
     } else {
         return ();
     }
@@ -91,10 +91,10 @@ sub runImpl {
     my $self = shift;
     my $run  = shift;
 
-    if( defined( $self->{delegate} )) {
-        my $childRun = $run->createChildRun( $self->{delegate} );
+    if( defined( $self->{_delegate} )) {
+        my $childRun = $run->createChildRun( $self->{_delegate} );
 
-        my $ret = $self->{delegate}->run( $childRun );
+        my $ret = $self->{_delegate}->run( $childRun );
 
         unless( $ret ) {
             $run->setOutput( $childRun->getOutput() );

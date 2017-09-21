@@ -25,6 +25,7 @@ package Macrobuild::HasNamedValues;
 
 use fields qw( _resolver );
 
+use overload;
 use UBOS::Logging;
 
 ##
@@ -86,7 +87,7 @@ sub getValue {
     if( defined( $ret )) {
         return $ret;
     }
-    fatal( 'Cannot resolve value:', $param );
+    fatal( $self, '- cannot resolve value:', $param );
 }
 
 ##
