@@ -112,26 +112,21 @@ sub getLocalValueNames {
 # Obtain all values of a named value, including overridden ones.
 #
 # $name: the name of the value
-# $resolve: if true, attempt to resolve all values
 # $appendHere: append the values to this array, or create a new one
 # return: array of the values, the first of which is the actual value. Others
 #         are overridden values
 sub getAllValues {
     my $self       = shift;
     my $name       = shift;
-    my $resolve    = shift || 0;
     my $appendHere = shift || [];
 
     if( exists( $self->{vars}->{$name} )) {
         my $value = $self->{vars}->{$name};
-        if( $resolve ) {
-            $value = Macrobuild::Utils::replaceVariables( $value, $self, undef, 1 );
-        }
         push @{$appendHere}, $value;
     }
     my $resolver = $self->getResolver();
-    if( $resolver ) {
-        $resolver->getAllValues( $name, $resolve, $appendHere );
+    if( defined( $resolver )) {
+        $resolver->getAllValues( $name, $appendHere );
     }
     return $appendHere;
 }
@@ -140,13 +135,11 @@ sub getAllValues {
 # Obtain all obtainable variables recursively, with all values, including
 # overridden ones.
 #
-# $resolve: if true, attempt to resolve all values
 # $insertHere: insert the values into this hash, or create a new one
 # return: hash of variable name to array of values, the first of which is the actual
 #         value. Others are overridden values.
 sub getAllNamedValuesWithAllValues {
     my $self       = shift;
-    my $resolve    = shift || 0;
     my $insertHere = shift || {};
 
     foreach my $key ( keys %{$self->{vars}} ) {
@@ -154,13 +147,10 @@ sub getAllNamedValuesWithAllValues {
         unless( exists( $insertHere->{$key} )) {
             $insertHere->{$key} = [];
         }
-        if( $resolve ) {
-            $value = Macrobuild::Utils::replaceVariables( $value, $self, undef, 1 );
-        }
         push @{$insertHere->{$key}}, $value;
     }
     if( $self->{delegate} ) {
-        $self->{delegate}->getAllNamedValuesWithAllValues( $resolve, $insertHere );
+        $self->{delegate}->getAllNamedValuesWithAllValues( $insertHere );
     }
     return $insertHere;
 }
