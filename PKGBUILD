@@ -20,6 +20,8 @@ check() {
             'test2-macros.pl' \
             'test3-splitjoin.pl' \
             'test4-delegating.pl' \
+            'test5-vars.pl' \
+            'test6-vars.pl' \
     ; do
         echo Running test $t
         perl -I ../vendor_perl $t
