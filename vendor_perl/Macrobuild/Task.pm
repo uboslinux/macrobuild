@@ -24,7 +24,7 @@ use warnings;
 package Macrobuild::Task;
 
 use base qw( Macrobuild::HasNamedValues );
-use fields qw( name setup stopOnError showInLog );
+use fields qw( name stopOnError showInLog );
 
 use UBOS::Logging;
 use overload q{""} => 'toString';
@@ -36,36 +36,54 @@ our @EXPORT = qw( SUCCESS FAIL DONE_NOTHING );
 # Constructor
 sub new {
     my $self     = shift;
-    my $resolver = shift;
     my @args     = @_;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    $self->SUPER::new( $resolver );
+    $self->SUPER::new( undef ); # set later
 
     $self->{name}        = undef; # can be overridden
     $self->{stopOnError} = 1;     # can be overridden
     $self->{showInLog}   = 1;     # can be overridden
 
     for( my $i=0; $i<@args ; $i+=2 ) {
-        my $value;
-        if( $resolver ) {
-            $value = $resolver->replaceVariables( $args[$i+1] );
-        } else {
-            $value = $args[$i+1];
-        }
-
-        if( $value =~ m!\$\{\?! ) {
-            fatal( 'Cannot resolve variable:', $value );
-        }
-
         eval {
-            $self->{$args[$i]} = $value;
+            $self->{$args[$i]} = $args[$i+1];
             1; # otherwise we can't set Undef
         } || fatal( 'Cannot assign: there is no property "' . $args[$i] . '" on objects of type', ref( $self ));
     }
     return $self;
+}
+
+##
+# Set the resolver, if it has not been set before
+# $resolver: the resolver
+sub setResolver {
+    my $self     = shift;
+    my $resolver = shift;
+
+    $self->SUPER::setResolver( $resolver ); # may fatal out
+
+    if( $resolver ) {
+        foreach my $key ( keys %$self ) {
+            my $value    = $self->{$key};
+            if( $value ) {
+                my $newValue = $resolver->replaceVariables( $value );
+
+                if( $newValue =~ m!\$\{\?! ) {
+                    fatal( 'Cannot resolve variable:', $newValue );
+                }
+
+                $self->{$key} = $newValue;
+            }
+        }
+
+        my @subtasks = $self->getSubtasks();
+        foreach my $subtask ( @subtasks ) {
+            $subtask->setResolver( $self );
+        }
+    }
 }
 
 ##
@@ -177,17 +195,6 @@ sub run {
     my $self = shift;
     my $run  = shift;
     my $dry  = shift;
-
-    if( defined( $self->{setup} )) {
-        debugAndSuspend( 'About to setup task:', $self, 'with', $run );
-
-        my $ret = $self->{setup}->( $run, $self );
-        # Don't need to pass in $self, it's usually in-lined into the constructor anyway
-        if( $ret == FAIL() ) {
-            error( 'Task setup failed, not running:', $self );
-            return $ret;
-        }
-    }
 
     if( $dry ) {
         $self->_printRecursively();

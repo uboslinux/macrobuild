@@ -129,8 +129,9 @@ sub getAllValues {
         }
         push @{$appendHere}, $value;
     }
-    if( $self->{resolver} ) {
-        $self->{resolver}->getAllValues( $name, $resolve, $appendHere );
+    my $resolver = $self->getResolver();
+    if( $resolver ) {
+        $resolver->getAllValues( $name, $resolve, $appendHere );
     }
     return $appendHere;
 }

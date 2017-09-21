@@ -147,7 +147,8 @@ if( $listShortcuts ) {
 
 # Now figure out the task(s) to run -- we either find the single task, or assemble a Sequential
 
-my $rootTask = _parseArgvToTask( \@ARGV, $constants );
+my $rootTask = _parseArgvToTask( \@ARGV );
+$rootTask->setResolver( $constants );
 
 my $taskRun = Macrobuild::TaskRun->new( $inputJson, $rootTask );
 my $exit    = $rootTask->run( $taskRun, $dryRun );
@@ -170,8 +171,7 @@ exit( 0 );
 
 #####
 sub _parseArgvToTask {
-    my $args            = shift;
-    my $resolveAgainst  = shift;
+    my $args = shift;
 
     my $retTask          = undef;
     my $sharedVars       = undef; # The ones before the first task has been mentioned
@@ -209,13 +209,11 @@ sub _parseArgvToTask {
                     %mergedVars = ( %$currentVars );
                 }
 
-                my $newTask = _createTask( $currentTaskName, \%mergedVars, $resolveAgainst );
+                my $newTask = _createTask( $currentTaskName, \%mergedVars );
                 if( $retTask ) {
                     unless( ref $retTask eq 'Macrobuild::CompositeTasks::Sequential' ) {
                         my $newRetTask = Macrobuild::CompositeTasks::Sequential->new(
-                                $resolveAgainst,
                                 'tasks' => [ $retTask ] );
-                        $retTask->{resolver} = $newRetTask;
                         $retTask = $newRetTask;
                     }
                     $retTask->appendTask( $newTask );
@@ -226,7 +224,7 @@ sub _parseArgvToTask {
                 $currentTaskName = undef;
                 $currentVars     = {};
             }
-            $currentTaskName = $resolveAgainst->replaceVariables( $arg );
+            $currentTaskName = $arg;
         }
     }
     if( $currentTaskName ) {
@@ -236,13 +234,11 @@ sub _parseArgvToTask {
         } else {
             %mergedVars = ( %$currentVars );
         }
-        my $newTask = _createTask( $currentTaskName, \%mergedVars, $resolveAgainst );
+        my $newTask = _createTask( $currentTaskName, \%mergedVars );
         if( $retTask ) {
             unless( ref $retTask eq 'Macrobuild::CompositeTasks::Sequential' ) {
                 my $newRetTask = Macrobuild::CompositeTasks::Sequential->new(
-                        $resolveAgainst,
                         'tasks' => [ $retTask ] );
-                $retTask->{resolver} = $newRetTask;
                 $retTask = $newRetTask;
             }
             $retTask->appendTask( $newTask );
@@ -260,14 +256,13 @@ sub _parseArgvToTask {
 sub _createTask {
     my $taskName       = shift;
     my $vars           = shift;
-    my $resolveAgainst = shift;
 
     my $ret = undef;
     # shortcuts can be defined in all files, and don't override each other
     if( $allShortcuts ) {
         for my $shortcuts ( @$allShortcuts ) {
             if( exists( $shortcuts->{$taskName} )) {
-                $ret = _parseArgvToTask( $shortcuts->{$taskName}, $resolveAgainst );
+                $ret = _parseArgvToTask( $shortcuts->{$taskName} );
                 last;
             }
         }
@@ -287,7 +282,7 @@ sub _createTask {
             eval "require '$fileName';" || fatal( 'Cannot read file', "$fileName\n", $@ );
             $taskName =~ s!/!::!g;
         }
-        $ret = $taskName->new( $resolveAgainst, %$vars );
+        $ret = $taskName->new( %$vars );
     }
     return $ret;
 }

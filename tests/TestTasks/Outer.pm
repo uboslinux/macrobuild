@@ -40,20 +40,11 @@ sub new {
         $self = fields::new( $self );
     }
 
-    $self->SUPER::new(
-            @args,
-            'setup' => sub {
-                my $run  = shift;
-                my $task = shift;
+    $self->SUPER::new( @args );
 
-                $task->setDelegate( TestTasks::Inner->new(
-                    $task,
-                    'message' => '${message}-outer'
-                ));
-
-                return SUCCESS;
-            });
-
+    $self->setDelegate( TestTasks::Inner->new(
+        'message' => '${message}-outer'
+    ));
 
     return $self;
 }

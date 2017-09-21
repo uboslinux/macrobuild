@@ -40,22 +40,13 @@ sub new {
         $self = fields::new( $self );
     }
 
-    $self->SUPER::new(
-            @args,
-            'setup' => sub {
-                my $run  = shift;
-                my $task = shift;
+    $self->SUPER::new( @args );
 
-                $task->setDelegate( TestTasks::SearchReplace->new(
-                    $task,
-                    'name'        => 'Delegated',
-                    'pattern'     => '${DelegatingSearchReplaceTestPattern}bb',
-                    'replacement' => 'X',
-                ));
-
-                return SUCCESS;
-            });
-
+    $self->setDelegate( TestTasks::SearchReplace->new(
+            'name'        => 'Delegated',
+            'pattern'     => '${DelegatingSearchReplaceTestPattern}bb',
+            'replacement' => 'X',
+    ));
 
     return $self;
 }

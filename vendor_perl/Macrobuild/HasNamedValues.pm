@@ -23,7 +23,7 @@ use warnings;
 
 package Macrobuild::HasNamedValues;
 
-use fields qw( resolver );
+use fields qw( _resolver );
 
 use UBOS::Logging;
 
@@ -37,7 +37,7 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    $self->{resolver} = $resolver;
+    $self->{_resolver} = $resolver;
 
     return $self;
 }
@@ -56,7 +56,20 @@ sub getName {
 sub getResolver {
     my $self = shift;
 
-    return $self->{resolver};
+    return $self->{_resolver};
+}
+
+##
+# Set the resolver, if it has not been set before
+# $resolver: the resolver
+sub setResolver {
+    my $self     = shift;
+    my $resolver = shift;
+
+    if( defined( $self->{_resolver} )) {
+        fatal( 'Have resolver already, cannot set again' );
+    }
+    $self->{_resolver} = $resolver;
 }
 
 ##

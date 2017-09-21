@@ -40,20 +40,11 @@ sub new {
         $self = fields::new( $self );
     }
 
-    $self->SUPER::new(
-            @args,
-            'setup' => sub {
-                my $run  = shift;
-                my $task = shift;
+    $self->SUPER::new( @args );
 
-                $task->setDelegate( Macrobuild::BasicTasks::Hello->new(
-                    $task,
-                    'message' => '${message}-inner'
-                ));
-
-                return SUCCESS;
-            });
-
+    $self->setDelegate( Macrobuild::BasicTasks::Hello->new(
+        'message' => '${message}-inner'
+    ));
 
     return $self;
 }

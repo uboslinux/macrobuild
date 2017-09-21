@@ -41,46 +41,34 @@ sub new {
         $self = fields::new( $self );
     }
 
-    $self->SUPER::new(
-            @args,
-            'setup' => sub {
-                my $run  = shift;
-                my $task = shift;
+    $self->SUPER::new( @args );
 
-                $task->setSplitTask( TestTasks::SearchReplace->new(
-                        $task,
-                        'pattern'     => 'a',
-                        'replacement' => 'A' ));
+    $self->setSplitTask( TestTasks::SearchReplace->new(
+            'pattern'     => 'a',
+            'replacement' => 'A' ));
 
-                $task->addParallelTask(
-                        'one',
-                        TestTasks::SearchReplace->new(
-                                $task,
-                                'pattern'     => 'A',
-                                'replacement' => '1' ));
+    $self->addParallelTask(
+            'one',
+            TestTasks::SearchReplace->new(
+                    'pattern'     => 'A',
+                    'replacement' => '1' ));
 
-                $task->addParallelTask(
-                        'two',
-                        TestTasks::SearchReplace->new(
-                                $task,
-                                'pattern'     => 'A',
-                                'replacement' => '2' ));
+    $self->addParallelTask(
+            'two',
+            TestTasks::SearchReplace->new(
+                    'pattern'     => 'A',
+                    'replacement' => '2' ));
 
-                $task->addParallelTask(
-                        'three',
-                        TestTasks::SearchReplace->new(
-                                $task,
-                                'pattern'     => 'A',
-                                'replacement' => '3' ));
+    $self->addParallelTask(
+            'three',
+            TestTasks::SearchReplace->new(
+                    'pattern'     => 'A',
+                    'replacement' => '3' ));
 
-                $task->setJoinTask( Macrobuild::BasicTasks::MergeValues->new(
-                        $task,
-                        'name'        => 'MergeValues',
-                        'keys'        => ['one', 'three' ] # leave out 'two' for testing purposes
-                ));
-
-                return SUCCESS;
-            });
+    $self->setJoinTask( Macrobuild::BasicTasks::MergeValues->new(
+            'name'        => 'MergeValues',
+            'keys'        => ['one', 'three' ] # leave out 'two' for testing purposes
+    ));
 
     return $self;
 }
