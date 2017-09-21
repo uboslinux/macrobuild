@@ -24,7 +24,6 @@ use warnings;
 
 package Macrobuild::TaskRun;
 
-use base qw( Macrobuild::HasNamedValues );
 use fields qw( input output children task );
 
 use UBOS::Logging;
@@ -34,19 +33,15 @@ use overload q{""} => 'toString';
 ##
 # Constructor.
 # $input: has of input data for this task run
-# $delegate: where to go to for variables not found locally
 # $task: the Task that is run by this TaskRun
 sub new {
     my $self     = shift;
     my $input    = shift;
-    my $delegate = shift;
     my $task     = shift;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    $self->SUPER::new( $delegate );
-
     $self->{input}    = $input;
     $self->{output}   = {};
     $self->{children} = undef;
@@ -71,14 +66,6 @@ sub getName {
     } else {
         return 'TaskRun for undef Task';
     }
-}
-
-##
-# @Overridden
-sub getLocalValueNames {
-    my $self = shift;
-
-    return ();
 }
 
 ##
@@ -131,59 +118,6 @@ sub createChildRun {
     return $ret;
 }
 
-##
-# Enables a Task to read one of its own properties. Variable references
-# are automatically expanded.
-# If no such value can be found, a fatal error occurs.
-#
-# $name: the name of the value
-# return: the value, or undef
-sub getProperty {
-    my $self = shift;
-    my $name = shift;
-
-    my $ret = $self->{task}->getProperty( $name );
-    if( defined( $ret ) && $self->{delegate} ) {
-        $ret = $self->{delegate}->replaceVariables( $ret ); # one level up
-    } else {
-        fatal( 'No such property value found:', $name, '. Task:', $self->{task}->getName() );
-    }
-    return $ret;
-}
-
-##
-# Enables a Task to read one of its own properties. Variable references
-# are automatically expanded.
-# If no such value can be found, return the default (which may be undef).
-#
-# $name: the name of the value
-# $default: the default value, if no other value can be found
-# return: the value, or undef
-sub getPropertyOrDefault {
-    my $self    = shift;
-    my $name    = shift;
-    my $default = shift;
-
-    my $ret = $self->{task}->getPropertyOrDefault( $name, $default );
-    if( defined( $ret )) {
-        $ret = $self->replaceVariables( $ret );
-    }
-    return $ret;
-}
-
-##
-# @Overridden
-sub getUnresolvedValue {
-    my $self    = shift;
-    my $name    = shift;
-    my $default = shift;
-
-    my $ret = $self->{task}->getPropertyOrDefault( $name, undef );
-    unless( defined( $ret )) {
-        $ret = $self->{delegate}->getUnresolvedValue( $name, $default );
-    }
-    return $ret;
-}
 
 ##
 # Convert to string

@@ -15,8 +15,8 @@ my $out;
 
 is( myexec( "$macrobuild"
             . " message=shared TestTasks::Outer message=specific",
-            undef, \$out, \$out ), 0, "test5-vars1-a" );
+            undef, \$out, \$out ), 0, "test6-vars1-a" );
 
-like( $out, qr/aaaXccc/, "test5-vars1-b" );
+like( $out, qr/specific-outer-inner/, "test6-vars1-b" );
 
 1;

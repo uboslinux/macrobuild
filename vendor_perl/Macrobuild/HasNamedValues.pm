@@ -23,21 +23,21 @@ use warnings;
 
 package Macrobuild::HasNamedValues;
 
-use fields qw( delegate );
+use fields qw( resolver );
 
 use UBOS::Logging;
 
 ##
 # Constructor.
-# $delegate: where to go to for variables not found locally
+# $resolver: where to go to for variables not found locally
 sub new {
     my $self     = shift;
-    my $delegate = shift;
+    my $resolver = shift;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    $self->{delegate} = $delegate;
+    $self->{resolver} = $resolver;
 
     return $self;
 }
@@ -51,35 +51,33 @@ sub getName {
 }
 
 ##
-# Obtain the delegate settings object, if any
-# return: the delegate
-sub getDelegate {
+# Obtain the resolver
+# return: the resolver
+sub getResolver {
     my $self = shift;
 
-    return $self->{delegate};
+    return $self->{resolver};
 }
 
 ##
-# Obtain a named value. Variable references are automatically expanded.
+# Obtain a named value.
 # If no such value can be found, a fatal error occurs.
 #
 # $name: the name of the value
-# return: the value, or undef
+# return: the value
 sub getValue {
     my $self    = shift;
     my $param   = shift;
 
-    my $ret = $self->getUnresolvedValue( $param, undef );
+    my $ret = $self->getValueOrDefault( $param, undef );
     if( defined( $ret )) {
-        $ret = $self->replaceVariables( $ret );
-    } else {
-        fatal( 'Cannot resolve value:', $param );
+        return $ret;
     }
-    return $ret;
+    fatal( 'Cannot resolve value:', $param );
 }
 
 ##
-# Obtain a named value. Variable references are automatically expanded.
+# Obtain a named value.
 # If no such value can be found, return the default value (which may
 # be undef.
 #
@@ -91,27 +89,7 @@ sub getValueOrDefault {
     my $name   = shift;
     my $default = shift;
 
-    my $ret = $self->getUnresolvedValue( $name, $default );
-    if( defined( $ret )) {
-        $ret = $self->replaceVariables( $ret );
-    }
-    return $ret;
-}
-
-##
-# Obtain a named value, starting locally and traversing up to delegates
-# as needed. Variable references are not expanded.
-# This must be overridden by subclasses.
-#
-# $name: the name of the value
-# $default: the default value, if no other value can be found
-# return: the value, or undef
-sub getUnresolvedValue {
-    my $self    = shift;
-    my $name   = shift;
-    my $default = shift;
-
-    fatal( 'Must override:', ref( $self ) . '::getUnresolvedValue' );
+    fatal( 'Must override:', ref( $self ) . '::getValueOrDefault' );
 }
 
 ##
@@ -183,19 +161,20 @@ sub _scaryReplace {
     my $unresolvedOk    = shift;
     my $extraDict       = shift;
 
-    my $MAX_REPLACEMENTS = 5;
-
     my %replacedAlready = ();
-    my $ret = $current;
-    for( my $i=0 ; $i<$MAX_REPLACEMENTS ; ++$i ) {
-        my %replacingNow = ();
-        $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->_replacement( $1, $s, $unresolvedOk, $extraDict, \%replacedAlready, \%replacingNow )/ge;
+    my $resolver        = $self;
+    my $ret             = $current;
 
+    while( $resolver ) {
+        my %replacingNow = ();
+
+        $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$resolver->_replacement( $1, $s, $unresolvedOk, $extraDict, \%replacedAlready, \%replacingNow )/ge;
         if( $ret !~ m!\$\{[^?]! ) {
             last;
         }
 
         %replacedAlready = ( %replacedAlready, %replacingNow );
+        $resolver = $resolver->getResolver();
     }
     return $ret;
 }
@@ -229,7 +208,7 @@ sub _replacement {
         $ret = $extraDict->{$matched};
     }
     unless( defined( $ret )) {
-        $ret = $self->getUnresolvedValue( $matched );
+        $ret = $self->getValue( $matched );
     }
     # we cannot replace things that aren't strings or aren't 1-length arrays
     if( defined( $ret )) {
@@ -260,7 +239,7 @@ sub _replacement {
                 if( UBOS::Logging::isTraceActive()) {
                     $resTrace .= ' (' . join( ', ', map { "$_=" . $del->getUnresolvedValue( $_ )} $del->getLocalValueNames()) . ')';
                 }
-                $del = $del->getDelegate();
+                $del = $del->getResolver();
             }
 
             fatal( 'Unknown variable ' . $matched . ' in string:', $s, $resTrace );

@@ -82,17 +82,17 @@ sub getName {
 
 ##
 # @Overridden
-sub getUnresolvedValue {
+sub getValueOrDefault {
     my $self    = shift;
-    my $name    = shift;
+    my $name   = shift;
     my $default = shift;
 
     my $ret;
     if( exists( $self->{vars}->{$name} ) && defined( $self->{vars}->{$name} )) {
         $ret = $self->{vars}->{$name};
 
-    } elsif( defined( $self->{delegate} )) {
-        $ret = $self->{delegate}->getUnresolvedValue( $name, $default );
+    } elsif( defined( $self->{resolver} )) {
+        $ret = $self->{resolver}->getValueOrDefault( $name, $default );
 
     } else {
         $ret = $default;
@@ -129,8 +129,8 @@ sub getAllValues {
         }
         push @{$appendHere}, $value;
     }
-    if( $self->{delegate} ) {
-        $self->{delegate}->getAllValues( $name, $resolve, $appendHere );
+    if( $self->{resolver} ) {
+        $self->{resolver}->getAllValues( $name, $resolve, $appendHere );
     }
     return $appendHere;
 }

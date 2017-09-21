@@ -35,44 +35,49 @@ use TestTasks::SearchReplace;
 # Constructor
 sub new {
     my $self = shift;
-    my %args = @_;
+    my @args = @_;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
 
     $self->SUPER::new(
-            %args,
+            @args,
             'setup' => sub {
                 my $run  = shift;
                 my $task = shift;
 
                 $task->setSplitTask( TestTasks::SearchReplace->new(
+                        $task,
                         'pattern'     => 'a',
                         'replacement' => 'A' ));
 
                 $task->addParallelTask(
                         'one',
                         TestTasks::SearchReplace->new(
+                                $task,
                                 'pattern'     => 'A',
                                 'replacement' => '1' ));
 
                 $task->addParallelTask(
                         'two',
                         TestTasks::SearchReplace->new(
+                                $task,
                                 'pattern'     => 'A',
                                 'replacement' => '2' ));
 
                 $task->addParallelTask(
                         'three',
                         TestTasks::SearchReplace->new(
+                                $task,
                                 'pattern'     => 'A',
                                 'replacement' => '3' ));
 
                 $task->setJoinTask( Macrobuild::BasicTasks::MergeValues->new(
-                            'name'        => 'MergeValues',
-                            'keys'        => ['one', 'three' ] # leave out 'two' for testing purposes
-                        ));
+                        $task,
+                        'name'        => 'MergeValues',
+                        'keys'        => ['one', 'three' ] # leave out 'two' for testing purposes
+                ));
 
                 return SUCCESS;
             });

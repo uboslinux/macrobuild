@@ -34,7 +34,7 @@ sub runImpl {
     my $self = shift;
     my $run  = shift;
 
-    my $msg = $run->getPropertyOrDefault( 'message', 'Message from task Hello: Hello! You called?' );
+    my $msg = $self->getPropertyOrDefault( 'message', 'Message from task Hello: Hello! You called?' );
     print( "$msg\n" );
 
     return SUCCESS;

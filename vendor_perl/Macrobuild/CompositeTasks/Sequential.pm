@@ -32,7 +32,7 @@ use UBOS::Logging;
 # Constructor
 sub new {
     my $self = shift;
-    my %args = @_;
+    my @args = @_;
 
     unless( ref $self ) {
         $self = fields::new( $self );
@@ -42,7 +42,7 @@ sub new {
     $self->{name}      = ref( $self );
     $self->{tasks}     = [];
 
-    $self->SUPER::new( %args );
+    $self->SUPER::new( @args );
 
     return $self;
 }

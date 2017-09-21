@@ -34,19 +34,20 @@ use UBOS::Logging;
 # Constructor
 sub new {
     my $self = shift;
-    my %args = @_;
+    my @args = @_;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
 
     $self->SUPER::new(
-            %args,
+            @args,
             'setup' => sub {
                 my $run  = shift;
                 my $task = shift;
 
                 $task->setDelegate( TestTasks::SearchReplace->new(
+                    $task,
                     'name'        => 'Delegated',
                     'pattern'     => '${DelegatingSearchReplaceTestPattern}bb',
                     'replacement' => 'X',

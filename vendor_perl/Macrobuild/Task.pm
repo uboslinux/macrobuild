@@ -23,6 +23,7 @@ use warnings;
 
 package Macrobuild::Task;
 
+use base qw( Macrobuild::HasNamedValues );
 use fields qw( name setup stopOnError showInLog );
 
 use UBOS::Logging;
@@ -34,19 +35,33 @@ our @EXPORT = qw( SUCCESS FAIL DONE_NOTHING );
 ##
 # Constructor
 sub new {
-    my $self = shift;
-    my @args = @_;
+    my $self     = shift;
+    my $resolver = shift;
+    my @args     = @_;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
+    $self->SUPER::new( $resolver );
+
     $self->{name}        = undef; # can be overridden
     $self->{stopOnError} = 1;     # can be overridden
     $self->{showInLog}   = 1;     # can be overridden
 
     for( my $i=0; $i<@args ; $i+=2 ) {
+        my $value;
+        if( $resolver ) {
+            $value = $resolver->replaceVariables( $args[$i+1] );
+        } else {
+            $value = $args[$i+1];
+        }
+
+        if( $value =~ m!\$\{\?! ) {
+            fatal( 'Cannot resolve variable:', $value );
+        }
+
         eval {
-            $self->{$args[$i]} = $args[$i+1];
+            $self->{$args[$i]} = $value;
             1; # otherwise we can't set Undef
         } || fatal( 'Cannot assign: there is no property "' . $args[$i] . '" on objects of type', ref( $self ));
     }
@@ -115,6 +130,34 @@ sub getPropertyOrDefault {
         $ret = $default;
     }
     return $ret;
+}
+
+##
+# @Overridden
+sub getValueOrDefault {
+    my $self    = shift;
+    my $name   = shift;
+    my $default = shift;
+
+    my $ret;
+    if( exists( $self->{$name} ) && defined( $self->{$name} )) {
+        $ret = $self->{$name};
+
+    } elsif( defined( $self->{resolver} )) {
+        $ret = $self->{resolver}->getValueOrDefault( $name, $default );
+
+    } else {
+        $ret = $default;
+    }
+    return $ret;
+}
+
+##
+# @Overridden
+sub getLocalValueNames {
+    my $self = shift;
+
+    return keys %{$self};
 }
 
 ##

@@ -54,8 +54,8 @@ sub _replace {
     my $run    = shift;
     my $countP = shift;
 
-    my $pattern     = $run->getProperty( 'pattern' );
-    my $replacement = $run->getProperty( 'replacement' );
+    my $pattern     = $self->getProperty( 'pattern' );
+    my $replacement = $self->getProperty( 'replacement' );
 
     my $type = ref( $in );
     my $ret;
