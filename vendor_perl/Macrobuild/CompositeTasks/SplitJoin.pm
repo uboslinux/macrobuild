@@ -151,7 +151,7 @@ sub runImpl {
             if( $taskRet < 0 ) {
                 $ret = $taskRet;
                 if( $self->{stopOnError} ) {
-                    error( "ERROR when executing " . $$splitTask->getName() . ". Stopping." );
+                    error( "ERROR when executing " . $splitTask->getName() . ". Stopping." );
                     $continue = 0;
                 }
             } else { # >0

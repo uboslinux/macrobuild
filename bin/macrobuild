@@ -56,7 +56,7 @@ if( $help ) {
 }
 if(    !$parseOk
     || ( $printVars && $printVars )
-    || ( $listShortcuts && $printVars )))
+    || ( $listShortcuts && $printVars ))
 {
     synopsisHelpQuit();
 }
