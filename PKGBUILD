@@ -11,20 +11,21 @@ depends=('perl' 'ubos-perl-utils')
 checkdepends=('perl-test-simple')
 options=('!strip')
 _vendor_perl=$(perl -V::vendorarch: | sed -e "s![' ]!!g")
+_tests=(
+    'test1/test1-inputoutput.pl'
+    'test2/test2-macros.pl'
+    'test3/test3-splitjoin.pl'
+    'test4/test4-delegating.pl'
+    'test5/test5-vars.pl'
+    'test6/test6-vars.pl'
+)
 
 check() {
     cd ${startdir}/tests
 
-    for t in \
-            'test1-inputoutput.pl' \
-            'test2-macros.pl' \
-            'test3-splitjoin.pl' \
-            'test4-delegating.pl' \
-            'test5-vars.pl' \
-            'test6-vars.pl' \
-    ; do
+    for t in ${_tests[@]} ; do
         echo Running test $t
-        perl -I ../vendor_perl $t
+        ( cd $(dirname $t); perl -I ../../vendor_perl $(basename $t) )
     done
 }
 

@@ -8,7 +8,7 @@ use Test::More tests => 2;
 
 # Definitions
 
-my $macrobuild = 'perl -I../vendor_perl -I. -I/usr/lib/perl5/vendor_perl ../bin/macrobuild -v';
+my $macrobuild = 'perl -I../../vendor_perl -I.. -I/usr/lib/perl5/vendor_perl ../../bin/macrobuild -v';
 my $out;
 
 # Test
