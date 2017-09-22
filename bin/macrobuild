@@ -55,7 +55,6 @@ if( $help ) {
     synopsisHelpQuit( 1 );
 }
 if(    !$parseOk
-    || ( $printVars && $printVars )
     || ( $listShortcuts && $printVars ))
 {
     synopsisHelpQuit();
@@ -352,11 +351,6 @@ The following optional arguments can be provided:
         Show all named values that are defined globally (not local to a
         task). If a variable refers to another, do not resolve the
         reference.
-
-    --print-resolved-vars
-        Show all named values that are defined globally (not local to a
-        task). If a variable refers to another, resolve the reference
-        first.
 
     --dry-run
         Do not run; only print what would be done if run.
