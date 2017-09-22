@@ -85,7 +85,7 @@ sub runImpl {
             if( $childTaskRet < 0 ) {
                 $ret = $childTaskRet;
                 if( $self->{stopOnError} ) {
-                    error( "ERROR when executing " . $run->replaceVariables( $childTask->getName()) . ". Stopping." );
+                    error( "ERROR when executing " . $childTask->getName() . ". Stopping." );
                     last;
                 }
             } else { # >0
