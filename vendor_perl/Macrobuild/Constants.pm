@@ -1,7 +1,5 @@
 #
-# Definitions for running macrobuild. Multiple instances of this class
-# may delegate to each other, to get a Pascal-like hierarchy of
-# namespaces that may (partially) override each other.
+# Definitions for running macrobuild.
 #
 # This file is part of macrobuild.
 # (C) 2014-2017 Indie Computing Corp.
@@ -36,17 +34,17 @@ use overload q{""} => 'toString';
 # Constructor
 # $name: name of the settings object, in case there is more than one
 # $vars: variables available to the tasks
-# $delegate: a delegate Settings objects to consult if a value was not available locally
+# $resolver: where to go to for variables not found locally
 sub new {
     my $self     = shift;
     my $name     = shift;
     my $vars     = shift || {};
-    my $delegate = shift || undef;
+    my $resolver = shift || undef;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    $self->SUPER::new( $delegate );
+    $self->SUPER::new( $resolver );
 
     $self->{name}     = $name;
     $self->{vars}     = $vars;
@@ -56,19 +54,19 @@ sub new {
 
 ##
 # Create a new Constants object by reading from a Perl file and delegating
-# to the provided delegate. The file must be a Perl file and return a
+# to the provided resolver. The file must be a Perl file and return a
 # hash.
 # $fileName: the file to read
-# $delegate: the delegate Constants
+# $resolver: where to go to for variables not found locally
 # return the new Constants object
 sub readAndCreate {
     my $self     = shift;
     my $fileName = shift;
-    my $delegate = shift;
+    my $resolver = shift;
 
     my $vars = eval "require '$fileName';" || fatal( 'Cannot read file', "$fileName\n", $@ );
 
-    return $self->new( 'Constants read from ' . $fileName, $vars, $delegate );
+    return $self->new( 'Constants read from ' . $fileName, $vars, $resolver );
 }
 
 ##
@@ -149,8 +147,9 @@ sub getAllNamedValuesWithAllValues {
         }
         push @{$insertHere->{$key}}, $value;
     }
-    if( $self->{delegate} ) {
-        $self->{delegate}->getAllNamedValuesWithAllValues( $insertHere );
+    my $resolver = $self->getResolver();
+    if( $resolver ) {
+        $resolver->getAllNamedValuesWithAllValues( $insertHere );
     }
     return $insertHere;
 }
