@@ -87,7 +87,8 @@ sub getValue {
     if( defined( $ret )) {
         return $ret;
     }
-    fatal( $self, '- cannot resolve value:', $param );
+    use Carp qw(longmess);
+    fatal( $self, '- cannot resolve value:', $param, "\n" . longmess( 'Stack trace:' ));
 }
 
 ##
@@ -100,7 +101,7 @@ sub getValue {
 # return: the value, or undef
 sub getValueOrDefault {
     my $self    = shift;
-    my $name   = shift;
+    my $name    = shift;
     my $default = shift;
 
     fatal( 'Must override:', ref( $self ) . '::getValueOrDefault' );
@@ -123,18 +124,22 @@ sub getLocalValueNames {
 # $s: the string containing the references to the variables
 # $extraDict: hack to allow one more variable to be defined
 # $unresolvedOk: return string containing unresolved variables if not all variables could be replaced
+# $resolutionTrace: to provide useful user feedback, we track all to-be-resolved strings
 # return: the string with variables returned, or undef
 sub replaceVariables {
-    my $self         = shift;
-    my $s            = shift;
-    my $extraDict    = shift;
-    my $unresolvedOk = shift;
+    my $self            = shift;
+    my $s               = shift;
+    my $extraDict       = shift;
+    my $unresolvedOk    = shift;
+    my $resolutionTrace = shift; # array of array[ $self, $s, $var-in-$s, $replacement ]
+
+    unless( defined( $resolutionTrace )) {
+        $resolutionTrace = [];
+    }
+    push @$resolutionTrace, [ $self, $s ];
 
     unless( defined( $s )) {
-        error( 'Cannot replace variables in undef' );
-        use Carp;
-        print carp( 'stack trace' );
-
+        $self->_replacementError( 'Cannot replace variables in undef', $resolutionTrace );
         return undef;
     }
 
@@ -161,7 +166,7 @@ sub replaceVariables {
         return \%ret;
 
     } else {
-        my $ret = $self->_scaryReplace( $s, $s, $unresolvedOk, $extraDict );
+        my $ret = $self->_scaryReplace( $s, $s, $unresolvedOk, $extraDict, $resolutionTrace );
         return $ret;
     }
 }
@@ -174,6 +179,7 @@ sub _scaryReplace {
     my $s               = shift;
     my $unresolvedOk    = shift;
     my $extraDict       = shift;
+    my $resolutionTrace = shift;
 
     my %replacedAlready = ();
     my $resolver        = $self;
@@ -182,7 +188,8 @@ sub _scaryReplace {
     while( $resolver ) {
         my %replacingNow = ();
 
-        $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$resolver->_replacement( $1, $s, $unresolvedOk, $extraDict, \%replacedAlready, \%replacingNow )/ge;
+        $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$resolver->_replacement(
+                $1, $s, $unresolvedOk, $extraDict, \%replacedAlready, \%replacingNow, $resolutionTrace )/ge;
         if( $ret !~ m!\$\{[^?]! ) {
             last;
         }
@@ -201,6 +208,7 @@ sub _scaryReplace {
 # $extraDict: hack to allow one more variable to be defined
 # $replacedAlready: to avoid loops in definitions, this tracks the variables replaced in previous passes
 # $replacingNow: to avoid loops in definitions, this tracks the variables replaced in the current pass
+# $resolutionTrace: to provide useful user feedback, we track all to-be-resolved strings
 # return: the replacement string
 sub _replacement {
     my $self            = shift;
@@ -210,9 +218,14 @@ sub _replacement {
     my $extraDict       = shift;
     my $replacedAlready = shift;
     my $replacingNow    = shift;
+    my $resolutionTrace = shift;
+
+    push @{$resolutionTrace->[-1]}, $matched;
 
     if( exists( $replacedAlready->{$matched} )) {
-        error( 'Recursive definition encountered when attempting to resolve variable:', $matched );
+        $self->_replacementError(
+                'Recursive definition encountered when attempting to resolve variable:' . $matched,
+                $resolutionTrace );
         return '${? ' . $matched . '}';
     }
     $replacingNow->{$matched} += 1;
@@ -222,7 +235,7 @@ sub _replacement {
         $ret = $extraDict->{$matched};
     }
     unless( defined( $ret )) {
-        $ret = $self->getValue( $matched );
+        $ret = $self->getValueOrDefault( $matched, undef );
     }
     # we cannot replace things that aren't strings or aren't 1-length arrays
     if( defined( $ret )) {
@@ -230,15 +243,23 @@ sub _replacement {
             if( @$ret == 1 ) {
                 $ret = $ret->[0];
             } else {
-                error( 'Cannot replace', $matched, 'in string', $s, 'with array:', @$ret );
+                $self->_replacementError(
+                        "Cannot replace '$matched' in string '$s' with array: "
+                                . join( ' ', @$ret ),
+                        $resolutionTrace );
                 return $matched;
             }
         } elsif( 'HASH' eq ref( $ret )) {
-            error( 'Cannot replace', $matched, 'in string', $s, 'with hash', keys %$ret );
+                $self->_replacementError(
+                        "Cannot replace '$matched' in string '$s' with hash: "
+                                . join( ', ', map { "'$_' => '" . $ret->{$_} . "'" } keys %$ret ),
+                        $resolutionTrace );
             return $matched;
         }
-    }
-    unless( defined( $ret )) {
+
+        push @{$resolutionTrace->[-1]}, $ret;
+
+    } else {
         if( $unresolvedOk ) {
             if( $matched =~ m!^\?! ) {
                 $ret = '{' . $matched . '}'; # got that before, no more ?
@@ -246,20 +267,45 @@ sub _replacement {
                 $ret = '${? ' . $matched . '}';
             }
         } else {
-            my $resTrace = "Resolution trace:";
-            my $del = $self;
-            while( $del ) {
-                $resTrace .= "\n * " . $del->getName();
-                if( UBOS::Logging::isTraceActive()) {
-                    $resTrace .= ' (' . join( ', ', map { "$_=" . $del->getUnresolvedValue( $_ )} $del->getLocalValueNames()) . ')';
-                }
-                $del = $del->getResolver();
-            }
-
-            fatal( 'Unknown variable ' . $matched . ' in string:', $s, $resTrace );
+            $self->_replacementError(
+                    "Unknown variable '$matched ' in string: '$s'",
+                    $resolutionTrace );
         }
     }
     return $ret;
+}
+
+##
+# Emit an error when variable resolution was not successful
+# $message: the reason for the error
+# $resolutionTrace: trace of the attempts that were made.
+sub _replacementError {
+    my $self            = shift;
+    my $message         = shift;
+    my $resolutionTrace = shift;
+
+    my $fullMessage = $message;
+    if( defined( $resolutionTrace ) && @$resolutionTrace ) {
+        $fullMessage .= "\nResolution trace, in sequence:";
+
+        foreach my $row ( @$resolutionTrace ) {
+            $fullMessage .= "\n * String '" . $row->[1] . "'";
+            if( @$row > 2 ) {
+                $fullMessage .= " -- replacing var '" . $row->[2] . '"';
+                if( @$row > 3 ) {
+                    $fullMessage .= " with value '" . $row->[3] . '"';
+                }
+                $fullMessage .= " (against " . $row->[0] . '"';
+            }
+        }
+    }
+
+    if( UBOS::Logging::isTraceActive() ) {
+        use Carp qw(longmess);
+        $fullMessage .= "\n" . longmess( 'Stack trace:' );
+    }
+
+    fatal( $fullMessage );
 }
 
 1;
