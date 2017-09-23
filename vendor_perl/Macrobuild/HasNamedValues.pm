@@ -296,15 +296,15 @@ sub _replacementError {
         foreach my $row ( @$replacementTrace ) {
             $fullMessage .= "\n * String '" . $row->[1] . "'";
             if( @$row > 2 ) {
-                $fullMessage .= " -- replacing var '" . $row->[2] . '"';
-                if( @$row > 3 ) {
-                    $fullMessage .= " with value '" . $row->[3] . '"';
+                $fullMessage .= " -- replacing var '" . $row->[2] . "'";
+                if( @$row > 3 && defined( $row->[3] )) {
+                    $fullMessage .= " with value '" . $row->[3] . "'";
                 }
                 $fullMessage .= " (against " . $row->[0] . '"';
 
                 if( @$row > 4 ) {
                     foreach my $valueTrace ( @{$row->[4]} ) {
-                        $fullMessage .= "\n   - tried " . $valueTrace;
+                        $fullMessage .= "\n   - tried getValue() on " . $valueTrace;
                     }
                 }
             }
