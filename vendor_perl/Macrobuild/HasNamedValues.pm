@@ -311,6 +311,10 @@ sub _replacementError {
         }
     }
 
+    if( UBOS::Logging::isTraceActive() ) {
+        $fullMessage .= "\nStack trace:\n";
+    }
+
     fatal( $fullMessage );
 }
 

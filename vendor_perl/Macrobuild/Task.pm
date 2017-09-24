@@ -153,9 +153,14 @@ sub getPropertyOrDefault {
 ##
 # @Overridden
 sub getValueOrDefault {
-    my $self    = shift;
-    my $name   = shift;
-    my $default = shift;
+    my $self          = shift;
+    my $name          = shift;
+    my $default       = shift;
+    my $getValueTrace = shift;
+
+    if( defined( $getValueTrace )) {
+        push @$getValueTrace, $self;
+    }
 
     my $ret;
     if( exists( $self->{$name} ) && defined( $self->{$name} )) {

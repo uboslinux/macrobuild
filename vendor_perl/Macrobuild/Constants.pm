@@ -81,11 +81,16 @@ sub getName {
 ##
 # @Overridden
 sub getValueOrDefault {
-    my $self    = shift;
-    my $name   = shift;
-    my $default = shift;
+    my $self          = shift;
+    my $name          = shift;
+    my $default       = shift;
+    my $getValueTrace = shift;
 
+    if( defined( $getValueTrace )) {
+        push @$getValueTrace, $self;
+    }
     my $ret;
+
     if( exists( $self->{vars}->{$name} ) && defined( $self->{vars}->{$name} )) {
         $ret = $self->{vars}->{$name};
 
