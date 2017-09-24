@@ -167,7 +167,7 @@ sub getValueOrDefault {
         $ret = $self->{$name};
 
     } elsif( defined( $self->getResolver() )) {
-        $ret = $self->getResolver()->getValueOrDefault( $name, $default );
+        $ret = $self->getResolver()->getValueOrDefault( $name, $default, $getValueTrace );
 
     } else {
         $ret = $default;

@@ -87,8 +87,7 @@ sub getValue {
     if( defined( $ret )) {
         return $ret;
     }
-    use Carp qw(longmess);
-    fatal( $self, '- cannot resolve value:', $param, "\n" . longmess( 'Stack trace:' ));
+    fatal( $self, '- cannot resolve value:', $param );
 }
 
 ##
