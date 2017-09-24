@@ -311,11 +311,6 @@ sub _replacementError {
         }
     }
 
-    if( UBOS::Logging::isTraceActive() ) {
-        use Carp qw(longmess);
-        $fullMessage .= "\n" . longmess( 'Stack trace:' );
-    }
-
     fatal( $fullMessage );
 }
 
