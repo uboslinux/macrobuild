@@ -272,7 +272,7 @@ sub _replacement {
             }
         } else {
             $self->_replacementError(
-                    "Unknown variable '$matched ' in string: '$s'",
+                    "Unknown variable '$matched' in string: '$s'",
                     $replacementTrace );
         }
     }
