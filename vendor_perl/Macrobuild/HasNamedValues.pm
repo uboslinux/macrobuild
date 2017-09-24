@@ -238,7 +238,7 @@ sub _replacement {
 
     unless( defined( $ret )) {
         $ret = $self->getValueOrDefault( $matched, undef, $getValueTrace );
-        push @$getValueTrace, $self;
+        # no need to add to getValueTrace, getValueOrDefault will have done that already
     }
     push @{$replacementTrace->[-1]}, $ret;
     push @{$replacementTrace->[-1]}, $getValueTrace;
@@ -303,7 +303,7 @@ sub _replacementError {
 
                 if( @$row > 4 ) {
                     foreach my $valueTrace ( @{$row->[4]} ) {
-                        $fullMessage .= "\n   - tried getValue() on " . $valueTrace;
+                        $fullMessage .= "\n   - tried getValueOrDefault() on " . $valueTrace;
                     }
                 }
             }

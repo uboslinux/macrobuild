@@ -18,6 +18,7 @@ _tests=(
     'test4/test4-delegating.pl'
     'test5/test5-vars.pl'
     'test6/test6-vars.pl'
+    'test7/test7-valuetrace.pl'
 )
 
 check() {
