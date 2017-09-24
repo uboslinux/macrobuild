@@ -146,7 +146,7 @@ sub replaceVariables {
     if( 'ARRAY' eq $type ) {
         my @ret;
         foreach my $ss ( @$s ) {
-            my $ret = $self->_scaryReplace( $ss, $s, $unresolvedOk, $extraDict );
+            my $ret = $self->_scaryReplace( $ss, $s, $unresolvedOk, $extraDict, $replacementTrace );
 
             push @ret, $ret;
         }
@@ -157,8 +157,8 @@ sub replaceVariables {
         foreach my $key ( sort keys %$s ) {
             my $value    = $s->{$key};
 
-            my $newKey   = $self->_scaryReplace( $key,   $s, $unresolvedOk, $extraDict );
-            my $newValue = $self->_scaryReplace( $value, $s, $unresolvedOk, $extraDict );
+            my $newKey   = $self->_scaryReplace( $key,   $s, $unresolvedOk, $extraDict, $replacementTrace );
+            my $newValue = $self->_scaryReplace( $value, $s, $unresolvedOk, $extraDict, $replacementTrace );
 
             $ret{$newKey} = $newValue;
         }
