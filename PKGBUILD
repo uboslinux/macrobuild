@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=${developer}
 pkgname=macrobuild
-pkgver=0.44
+pkgver=0.45
 pkgrel=1
 pkgdesc="Build framework for large, 'macro' tasks"
 arch=('any')
@@ -19,6 +19,7 @@ _tests=(
     'test5/test5-vars.pl'
     'test6/test6-vars.pl'
     'test7/test7-valuetrace.pl'
+    'test8/test8-fail.pl'
 )
 
 check() {

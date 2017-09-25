@@ -57,12 +57,7 @@ sub getName {
     my $self = shift;
 
     if( defined( $self->{task} )) {
-        my $taskName = $self->{task}->getName();
-        if( $taskName ) {
-            return 'TaskRun for ' . $taskName;
-        } else {
-            return 'TaskRun for unnamed task of type ' . ref( $self->{task} );
-        }
+        return 'TaskRun for ' . $self->{task};
     } else {
         return 'TaskRun for undef Task';
     }

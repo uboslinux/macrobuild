@@ -54,7 +54,7 @@ sub getName {
     my $ret = $self->SUPER::getName();
     unless( $ret ) {
         if( ref( $self ) eq 'Macrobuild::CompositeTasks::Delegating' ) {
-            $ret = 'Delegating to ' . $self->{_delegate}->getName();
+            $ret = 'Delegating to ' . $self->{_delegate};
         }
     }
     return $ret;
@@ -102,7 +102,7 @@ sub runImpl {
         return $ret;
 
     } else {
-        error( "No delegate defined for delegating task", $self->getName() );
+        error( "No delegate defined for delegating task", $self );
         return $self->FAIL;
     }
 }

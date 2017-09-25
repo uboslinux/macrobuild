@@ -292,8 +292,9 @@ sub DONE_NOTHING {
 sub toString {
     my $self = shift;
 
-    if( $self->{name} ) {
-        return ref( $self ) . "(name=$self->{name})";
+    my $name = $self->getName();
+    if( $name ) {
+        return ref( $self ) . "(name=$name)";
     } else {
         return overload::StrVal( $self );
     }

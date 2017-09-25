@@ -151,7 +151,7 @@ sub runImpl {
             if( $taskRet < 0 ) {
                 $ret = $taskRet;
                 if( $self->{stopOnError} ) {
-                    error( "ERROR when executing " . $splitTask->getName() . ". Stopping." );
+                    error( 'During execution of split task and stopping:', $splitTask );
                     $continue = 0;
                 }
             } else { # >0
@@ -193,7 +193,7 @@ sub runImpl {
                 if( $taskRet < 0 ) {
                     $ret = $taskRet;
                     if( $self->{stopOnError} ) {
-                        error( "ERROR when executing " . $task->getName() . ". Stopping." );
+                        error( 'During execution of parallel task and stopping:', $task );
                         $continue = 0;
                         last;
                     }
@@ -222,7 +222,7 @@ sub runImpl {
                 if( $taskRet < 0 ) {
                     $ret = $taskRet;
                     if( $self->{stopOnError} ) {
-                        error( "ERROR when executing " . $joinTask->getName() . ". Stopping." );
+                        error( 'During execution of join task and stopping: ', $joinTask );
                         $continue = 0;
                     }
                 } else { # >0
