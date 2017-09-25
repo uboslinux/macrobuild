@@ -208,7 +208,7 @@ sub run {
 
     } else {
         debugAndSuspend( 'About to run task:', $self, 'with', $run );
-        trace( '++ About to run task:', $self );
+        info( '++ About to run task:', $self );
 
         my $ret = $self->runImpl( $run );
 
