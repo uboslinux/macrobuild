@@ -65,9 +65,12 @@ UBOS::Logging::initialize( 'macrobuild', undef, $verbose, $logConfigFile, $debug
 my $inputJson = {};
 if( $inputFile ) {
     unless( -r $inputFile ) {
-        fatal( 'Cannot find or ready input file:', $inputFile );
+        fatal( 'Cannot find or read input file:', $inputFile );
     }
     $inputJson = UBOS::Utils::readJsonFromFile( $inputFile );
+    unless( $inputJson ) {
+        fatal();
+    }
 }
 
 # Init global settings
