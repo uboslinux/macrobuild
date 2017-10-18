@@ -60,7 +60,7 @@ if(    !$parseOk
     synopsisHelpQuit();
 }
 
-UBOS::Logging::initialize( 'macrobuild', undef, $verbose, $logConfigFile, $debug );
+UBOS::Logging::initialize( 'macrobuild', undef, $verbose, $logConfigFile, $debug, '/etc/macrobuild' );
 
 my $inputJson = {};
 if( $inputFile ) {

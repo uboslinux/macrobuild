@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=${developer}
 pkgname=macrobuild
-pkgver=0.46
+pkgver=0.47
 pkgrel=1
 pkgdesc="Build framework for large, 'macro' tasks"
 arch=('any')
@@ -35,5 +35,6 @@ package() {
     for d in Macrobuild Macrobuild/BasicTasks Macrobuild/CompositeTasks; do
         install -D -m644 ${startdir}/vendor_perl/$d/*.pm -t ${pkgdir}${_vendor_perl}/$d/
     done
+    install -D -m644 ${startdir}/etc/macrobuild/*.conf -t ${pkgdir}/etc/macrobuild/
     install -D -m755 ${startdir}/bin/macrobuild -t ${pkgdir}/usr/bin/
 }
