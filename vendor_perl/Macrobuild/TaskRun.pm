@@ -117,12 +117,15 @@ sub createChildRun {
 ##
 # Convert to string
 # return string
+# $level: larger numbers mean more output. Defaults taken from logging level
 sub toString {
     my $self = shift;
+    my $level = shift || ( UBOS::Logging::isTraceActive() ? 2 : ( UBOS::Logging::isInfoActive() ? 1 : 0 ));
 
     my $ret = overload::StrVal( $self ) . '( name="' . $self->getName();
     my $sep = '", ';
-    if( UBOS::Logging::isTraceActive() ) {
+
+    if( $level >= 2 ) {
         use Data::Dumper;
 
        if( $self->{input} ) {
@@ -134,7 +137,7 @@ sub toString {
            $sep = ', ';
        }
 
-    } elsif( UBOS::Logging::isInfoActive() ) {
+    } elsif( $level >= 1 ) {
        if( $self->{input} ) {
            $ret .= $sep . '#in=' . ( keys %{$self->{input}} );
            $sep = ', ';

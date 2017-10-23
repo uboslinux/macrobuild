@@ -207,13 +207,13 @@ sub run {
         return DONE_NOTHING();
 
     } else {
-        unless( debugAndSuspend( '++ About to run task:', $self, 'with', $run )) {
+        unless( debugAndSuspend( '++ About to run task:', $self, 'with', "\n" . $run->toString( 2 ) . "\n" )) {
             info( '++ About to run task:', $self );
         }
 
         my $ret = $self->runImpl( $run );
 
-        unless( debugAndSuspend( '-- Done running task:', $self, 'with', $run, 'return code', $ret )) {
+        unless( debugAndSuspend( '-- Done running task:', $self, 'with', "\n" . $run->toString( 2 ) . "\n", 'return code', $ret )) {
             if( $ret == FAIL() ) {
                 info( '-- Task returned with error:', $self );
             }
