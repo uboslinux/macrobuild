@@ -262,7 +262,9 @@ sub _createTask {
     if( $allShortcuts ) {
         for my $shortcuts ( @$allShortcuts ) {
             if( exists( $shortcuts->{$taskName} )) {
-                $ret = _parseArgvToTask( $shortcuts->{$taskName} );
+                my @newArgs = @{$shortcuts->{$taskName}};
+                push @newArgs, map { "$_=" . $vars->{$_} } sort keys %$vars;
+                $ret = _parseArgvToTask( \@newArgs );
                 last;
             }
         }
@@ -368,7 +370,5 @@ END
     }
     exit( 0 );
 }
-
-
 
 1;
