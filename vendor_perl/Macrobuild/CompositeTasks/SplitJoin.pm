@@ -29,7 +29,7 @@ use warnings;
 package Macrobuild::CompositeTasks::SplitJoin;
 
 use base qw( Macrobuild::Task );
-use fields qw( _splitTask _parallelTasks _parallelTasksSequence _joinTask );
+use fields qw( _splitTask _parallelTasks _parallelTasksSequence _joinTask splitSplitTaskOutput splitPrefix );
 
 use UBOS::Logging;
 
@@ -179,14 +179,30 @@ sub runImpl {
             }
         }
         # put in the remaining tasks in a predictable sequence
-        map { my $t = $_; unless( exists( $inSequence{$t} )) { push @realSequence, $t; } } sort keys %{$self->{_parallelTasks}};
+        map {   my $t = $_;
+                unless( exists( $inSequence{$t} )) {
+                    push @realSequence, $t;
+                }
+            } sort keys %{$self->{_parallelTasks}};
 
         my $outData = {};
 
         foreach my $taskName ( @realSequence ) {
             my $task = $self->{_parallelTasks}->{$taskName};
 
-            my $childRun = $run->createChildRun( $task, $previousChildRun );
+            my $previousSplitChildRun = $previousChildRun;
+            if( $previousChildRun && $splitTask && $self->{splitSplitTaskOutput} ) {
+                my $previousChildRunOutput = $previousChildRun->getOutput();
+                my $sectionName            = defined( $self->{splitPrefix} ) ? $self->{splitPrefix} . $taskName : $taskName;
+                my $thisInput;
+                if( exists( $previousChildRunOutput->{$sectionName} )) {
+                    $thisInput = $previousChildRunOutput->{$sectionName};
+                } else {
+                    $thisInput = {};
+                }
+                $previousSplitChildRun = Macrobuild::TaskRun->new( $thisInput, $run, $self );
+            }
+            my $childRun = $run->createChildRun( $task, $previousSplitChildRun );
             my $taskRet  = $task->run( $childRun );
 
             if( $taskRet ) {
