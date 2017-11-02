@@ -143,6 +143,7 @@ sub runImpl {
     my $previousChildRun = undef;
 
     my $splitTask = $self->{_splitTask};
+
     if( $splitTask ) {
         $previousChildRun = $run->createChildRun( $splitTask );
         my $taskRet       = $splitTask->run( $previousChildRun );
@@ -200,7 +201,8 @@ sub runImpl {
                 } else {
                     $thisInput = {};
                 }
-                $previousSplitChildRun = Macrobuild::TaskRun->new( $thisInput, $run, $self );
+                $previousSplitChildRun = Macrobuild::TaskRun->new( {}, $run, $self );
+                $previousSplitChildRun->setOutput( $thisInput );
             }
             my $childRun = $run->createChildRun( $task, $previousSplitChildRun );
             my $taskRet  = $task->run( $childRun );
