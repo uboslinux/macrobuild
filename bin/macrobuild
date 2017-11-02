@@ -263,7 +263,11 @@ sub _createTask {
         for my $shortcuts ( @$allShortcuts ) {
             if( exists( $shortcuts->{$taskName} )) {
                 my @newArgs = @{$shortcuts->{$taskName}};
-                push @newArgs, map { "$_=" . $vars->{$_} } sort keys %$vars;
+                push @newArgs, map { my $x = $_;
+                                     ref( $vars->{$x} )
+                                         ? ( map { "$x=$_" } @{$vars->{$x}} )
+                                         : ( "$x=" . $vars->{$x} )
+                                   } sort keys %$vars;
                 $ret = _parseArgvToTask( \@newArgs );
                 last;
             }
