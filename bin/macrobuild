@@ -36,26 +36,30 @@ my $debug             = undef;
 my $inputFile         = undef;
 my $outputFile        = undef;
 my $listShortcuts     = 0;
+my $showShortcut      = undef;
 my $printVars         = 0;
 my $dryRun            = 0;
 my $help              = 0;
 
 my $parseOk = GetOptions(
-    'verbose+'       => \$verbose,
-    'logConfig=s'    => \$logConfigFile,
-    'debug'          => \$debug,
-    'in=s'           => \$inputFile,
-    'out=s'          => \$outputFile,
-    'list-shortcuts' => \$listShortcuts,
-    'print-vars'     => \$printVars,
-    'dry-run|n'      => \$dryRun,
-    'help'           => \$help );
+    'verbose+'        => \$verbose,
+    'logConfig=s'     => \$logConfigFile,
+    'debug'           => \$debug,
+    'in=s'            => \$inputFile,
+    'out=s'           => \$outputFile,
+    'list-shortcuts'  => \$listShortcuts,
+    'show-shortcut=s' => \$showShortcut,
+    'print-vars'      => \$printVars,
+    'dry-run|n'       => \$dryRun,
+    'help'            => \$help );
 
 if( $help ) {
     synopsisHelpQuit( 1 );
 }
 if(    !$parseOk
-    || ( $listShortcuts && $printVars ))
+    || ( $listShortcuts && $printVars )
+    || ( $showShortcut  && $printVars )
+    || ( $listShortcuts && $showShortcut ))
 {
     synopsisHelpQuit();
 }
@@ -106,7 +110,7 @@ if( $printVars ) {
     exit 0;
 }
 
-if( $listShortcuts ) {
+if( $listShortcuts || $showShortcut ) {
     if( @$allShortcuts ) {
         my $mergedShortcuts = {};
         for my $all ( @$allShortcuts ) {
@@ -120,7 +124,19 @@ if( $listShortcuts ) {
         use IO::Handle;
         STDOUT->autoflush; # make sure it appears before subroutine bails out in case of error
 
-        if( $verbose ) {
+        if( $showShortcut ) {
+            my $long = $mergedShortcuts->{$showShortcut};
+            if( $long ) {
+                if( ref( $long ) eq 'ARRAY' ) {
+                    $long = join( ' ', @$long );
+                }
+                printf "%s => %s\n", $showShortcut, ( $long ? $long : '<empty>' );
+            } else {
+                print( "Shortcut not known: $showShortcut\n" );
+                exit 1;
+            }
+
+        } elsif( $verbose ) {
             my $max = 8;
             foreach my $short ( keys %$mergedShortcuts ) {
                 if( length( $short ) > $max ) {
@@ -355,6 +371,9 @@ The following optional arguments can be provided:
     --list-shortcuts
         Do not run any tasks. Show the known task shortcuts instead.
         Adding -v provides more detail.
+
+    --show-shortcut <name>
+        Show the expansion of the shortcut <name>.
 
     --print-vars
         Show all named values that are defined globally (not local to a
