@@ -9,7 +9,6 @@ use warnings;
 
 package Macrobuild::Constants;
 
-use Macrobuild::Utils;
 use UBOS::Logging;
 
 use base qw( Macrobuild::HasNamedValues );
