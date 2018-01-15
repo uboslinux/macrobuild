@@ -194,7 +194,7 @@ sub run {
 
     } else {
         unless( debugAndSuspend( '++ About to run task:', $self, 'with', "\n" . $run->toString( 2 ) . "\n" )) {
-            info( '++ About to run task:', $self );
+            info( '++ Run:', $self );
         }
 
         my $ret = $self->runImpl( $run );
