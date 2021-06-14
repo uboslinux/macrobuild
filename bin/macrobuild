@@ -23,6 +23,8 @@ my $inputFile         = undef;
 my $outputFile        = undef;
 my $listShortcuts     = 0;
 my $showShortcut      = undef;
+my $recursive         = 0;
+my $detail            = 0;
 my $printVars         = 0;
 my $dryRun            = 0;
 my $help              = 0;
@@ -35,6 +37,8 @@ my $parseOk = GetOptions(
     'out=s'           => \$outputFile,
     'list-shortcuts'  => \$listShortcuts,
     'show-shortcut=s' => \$showShortcut,
+    'recursive'       => \$recursive,
+    'detail'          => \$detail,
     'print-vars'      => \$printVars,
     'dry-run|n'       => \$dryRun,
     'help'            => \$help );
@@ -45,7 +49,8 @@ if( $help ) {
 if(    !$parseOk
     || ( $listShortcuts && $printVars )
     || ( $showShortcut  && $printVars )
-    || ( $listShortcuts && $showShortcut ))
+    || ( $listShortcuts && $showShortcut )
+    || ( ( $recursive || $detail ) && !$listShortcuts && !$showShortcut ))
 {
     synopsisHelpQuit();
 }
@@ -111,35 +116,9 @@ if( $listShortcuts || $showShortcut ) {
         STDOUT->autoflush; # make sure it appears before subroutine bails out in case of error
 
         if( $showShortcut ) {
-            my $long = $mergedShortcuts->{$showShortcut};
-            if( $long ) {
-                if( ref( $long ) eq 'ARRAY' ) {
-                    $long = join( ' ', @$long );
-                }
-                printf "%s => %s\n", $showShortcut, ( $long ? $long : '<empty>' );
-            } else {
-                print( "Shortcut not known: $showShortcut\n" );
-                exit 1;
-            }
-
-        } elsif( $verbose ) {
-            my $max = 8;
-            foreach my $short ( keys %$mergedShortcuts ) {
-                if( length( $short ) > $max ) {
-                    $max = length( $short );
-                }
-            }
-            foreach my $short ( sort keys %$mergedShortcuts ) {
-                my $long = $mergedShortcuts->{$short};
-                if( ref( $long ) eq 'ARRAY' ) {
-                    $long = join( ' ', @$long );
-                }
-                printf "%-" . $max . "s => %s\n", $short, ( $long ? $long : '<empty>' );
-            }
+            _printShortcuts( $mergedShortcuts, [ $showShortcut ], $detail, $recursive );
         } else {
-            foreach my $short ( sort keys %$mergedShortcuts ) {
-                print "$short\n";
-            }
+            _printShortcuts( $mergedShortcuts, [ sort keys %$mergedShortcuts ], $detail, $recursive );
         }
     } else {
         print "No shortcut task names defined.\n";
@@ -313,6 +292,49 @@ sub _var2string {
 }
 
 #####
+sub _printShortcuts {
+    my $shortcuts = shift;
+    my $names     = shift;
+    my $detail    = shift || 0;
+    my $recursive = shift || 0;
+    my $indent    = shift || 0;
+
+    my $indentString = '  ' x $indent;
+
+    my $max = 8;
+    if( $detail ) {
+        foreach my $name ( @$names ) {
+            if( length( $name ) > $max ) {
+                $max = length( $name );
+            }
+        }
+    }
+
+    foreach my $name ( @$names ) {
+        my $expansion = $shortcuts->{$name};
+        if( $expansion ) {
+            unless( ref( $expansion ) eq 'ARRAY' ) {
+                $expansion = [ $expansion ];
+            }
+            my $value = join( ' ', @$expansion );
+
+            if( $detail ) {
+                printf "$indentString%-" . $max . "s => %s\n", $name, ( $value ? $value : '<empty>' );
+            } else {
+                printf "$indentString$name\n";
+            }
+            if( $recursive ) {
+                _printShortcuts( $shortcuts, $expansion, $detail, 1, $indent+1 );
+            }
+
+        } elsif( $name =~ m!^[A-Z]! || $detail ) {
+            # This is a hack. We really should cleanly distinguish between task names and arguments, not by whether something is uppercase or not
+            printf "$indentString$name\n";
+        }
+    }
+}
+
+#####
 sub synopsisHelpQuit {
     my $long = shift || 0;
 
@@ -354,11 +376,11 @@ The following optional arguments can be provided:
         Do not write any resulting JSON output to the console, but write
         it to file <file> instead.
 
-    --list-shortcuts
+    --list-shortcuts [--recursive | --detail]
         Do not run any tasks. Show the known task shortcuts instead.
         Adding -v provides more detail.
 
-    --show-shortcut <name>
+    --show-shortcut <name> [--recursive | --detail]
         Show the expansion of the shortcut <name>.
 
     --print-vars
