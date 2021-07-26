@@ -22,7 +22,7 @@ _tests=(
     'test8/test8-fail.pl'
 )
 
-check() {
+BROKEN_check() {
     cd ${startdir}/tests
 
     for t in ${_tests[@]} ; do
