@@ -81,7 +81,7 @@ if( $listVars ) {
         my $values = $vars->{$key};
         printf "%-" . ($max+1) . "s: %s\n", $key, _var2string( $values->[0] );
         for( my $i=1 ; $i<@$values ; ++$i ) {
-            printf "%" . $max . "s  %s\n", '(overridden)', _var2string( $values->[$i] );
+            printf "%" . ($max+1) . "s  %s\n", '(overridden)', _var2string( $values->[$i] );
         }
     }
     exit 0;
@@ -205,8 +205,23 @@ sub _createTask {
         eval "require '$fileName';" || fatal( 'Cannot read file', "$fileName\n", $@ );
         $taskName =~ s!/!::!g;
     }
-    my @realVars = map{ /(.*)=(.*)/; ( $1, $2 ) } @vars;
-    my $ret = $taskName->new( @realVars );
+    my %realVars = ();
+    foreach my $pair ( @vars ) {
+        if( $pair =~ /(.*)=(.*)/ ) {
+            my( $key, $value ) = ( $1, $2 );
+            if( !exists( $realVars{$key} ) ) {
+                $realVars{$key} = $value;
+            } elsif( ref( $realVars{$key} ) eq 'ARRAY' ) {
+                push @{$realVars{$key}}, $value;
+            } else {
+                $realVars{$key} = [ $realVars{$key}, $value ];
+            }
+        } else {
+            warning( "Cannot parse $pair, no =, skipping" );
+        }
+    }
+
+    my $ret = $taskName->new( %realVars );
 
     return $ret;
 }
