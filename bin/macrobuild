@@ -9,6 +9,7 @@ use strict;
 use warnings;
 
 use Getopt::Long;
+use IO::Handle;
 use Macrobuild::CompositeTasks::Sequential;
 use Macrobuild::Constants;
 use Macrobuild::Task;
@@ -16,52 +17,39 @@ use Macrobuild::TaskRun;
 use UBOS::Logging;
 use UBOS::Utils;
 
-my $verbose           = 0;
-my $logConfigFile     = undef;
-my $debug             = undef;
-my $inputFile         = undef;
-my $outputFile        = undef;
-my $listShortcuts     = 0;
-my $showShortcut      = undef;
-my $printVars         = 0;
-my $dryRun            = 0;
-my $help              = 0;
+my $verbose       = 0;
+my $logConfigFile = undef;
+my $debug         = undef;
+my $listTasks     = 0;
+my $showTask      = undef;
+my $listVars      = 0;
+my $dryRun        = 0;
+my $help          = 0;
 
 my $parseOk = GetOptions(
-    'verbose+'        => \$verbose,
-    'logConfig=s'     => \$logConfigFile,
-    'debug'           => \$debug,
-    'in=s'            => \$inputFile,
-    'out=s'           => \$outputFile,
-    'list-shortcuts'  => \$listShortcuts,
-    'show-shortcut=s' => \$showShortcut,
-    'print-vars'      => \$printVars,
-    'dry-run|n'       => \$dryRun,
-    'help'            => \$help );
+    'verbose+'    => \$verbose,
+    'logConfig=s' => \$logConfigFile,
+    'debug'       => \$debug,
+    'list-tasks'  => \$listTasks,
+    'show-task=s' => \$showTask,
+    'list-vars'   => \$listVars,
+    'dry-run|n'   => \$dryRun,
+    'help'        => \$help );
 
 if( $help ) {
     synopsisHelpQuit( 1 );
 }
 if(    !$parseOk
-    || ( $listShortcuts && $printVars )
-    || ( $showShortcut  && $printVars )
-    || ( $listShortcuts && $showShortcut ))
+    || ( $listTasks && $listVars )
+    || ( $showTask  && $listVars )
+    || ( $listTasks && $showTask ))
 {
     synopsisHelpQuit();
 }
 
 UBOS::Logging::initialize( 'macrobuild', undef, $verbose, $logConfigFile, $debug, '/etc/macrobuild' );
 
-my $inputJson = {};
-if( $inputFile ) {
-    unless( -r $inputFile ) {
-        fatal( 'Cannot find or read input file:', $inputFile );
-    }
-    $inputJson = UBOS::Utils::readJsonFromFile( $inputFile );
-    unless( $inputJson ) {
-        fatal();
-    }
-}
+STDOUT->autoflush; # make sure it appears before subroutine bails out in case of error
 
 # Init global settings
 
@@ -76,9 +64,12 @@ for my $defaultsFile ( './settings.pl', './local.pl' ) { # leading ./ required
         $constants = Macrobuild::Constants->readAndCreate( $defaultsFile, $constants );
     }
 }
-my $allShortcuts = $constants->getAllValues( 'shortcuts' );
 
-if( $printVars ) {
+my $tasks = eval "require './tasks.pl';" || fatal( "Cannot read file ./tasks.pl\n", $@ );
+
+if( $listVars ) {
+    info( 'Listing variables' );
+
     my $vars = $constants->getAllNamedValuesWithAllValues();
     my $max = length( '(overridden)' ) + 2;
     foreach my $key ( keys %$vars ) {
@@ -88,7 +79,7 @@ if( $printVars ) {
     }
     foreach my $key ( sort keys %$vars ) {
         my $values = $vars->{$key};
-        printf "%-" . $max . "s: %s\n", $key, _var2string( $values->[0] );
+        printf "%-" . ($max+1) . "s: %s\n", $key, _var2string( $values->[0] );
         for( my $i=1 ; $i<@$values ; ++$i ) {
             printf "%" . $max . "s  %s\n", '(overridden)', _var2string( $values->[$i] );
         }
@@ -96,63 +87,54 @@ if( $printVars ) {
     exit 0;
 }
 
-if( $listShortcuts || $showShortcut ) {
-    if( @$allShortcuts ) {
-        my $mergedShortcuts = {};
-        for my $all ( @$allShortcuts ) {
-            for my $key ( keys %$all ) {
-                unless( exists( $mergedShortcuts->{$key} )) {
-                    $mergedShortcuts->{$key} = $all->{$key};
-                }
-            }
+if( $listTasks ) {
+    info( 'Listing tasks' );
+
+    if( keys %$tasks ) {
+        foreach my $name ( sort keys %$tasks ) {
+            print "$name\n";
         }
+        exit 0;
 
-        use IO::Handle;
-        STDOUT->autoflush; # make sure it appears before subroutine bails out in case of error
+    } else {
+        fatal( 'No tasks have been defined' );
+    }
+}
 
-        if( $showShortcut ) {
-            my $long = $mergedShortcuts->{$showShortcut};
-            if( $long ) {
-                if( ref( $long ) eq 'ARRAY' ) {
-                    $long = join( ' ', @$long );
-                }
-                printf "%s => %s\n", $showShortcut, ( $long ? $long : '<empty>' );
-            } else {
-                print( "Shortcut not known: $showShortcut\n" );
-                exit 1;
-            }
+if( $showTask ) {
+    info( 'Showing task:', $showTask );
 
-        } elsif( $verbose ) {
-            my $max = 8;
-            foreach my $short ( keys %$mergedShortcuts ) {
-                if( length( $short ) > $max ) {
-                    $max = length( $short );
+    my $taskDef = $tasks->{$showTask};
+    if( $taskDef ) {
+        if( ref( $taskDef ) eq 'ARRAY' && @$taskDef ) {
+            printf( "%s =>\n", $showTask );
+            foreach my $taskStep ( @$taskDef ) {
+                if( ref( $taskStep ) eq 'ARRAY' && @$taskStep ) {
+                    my $sep = "    ";
+                    foreach my $cmdOrArg ( @$taskStep ) {
+                        print( "$sep$cmdOrArg\n" );
+                        $sep = "        ";
+                    }
+                } else {
+                    print( "    $taskStep\n" );
                 }
-            }
-            foreach my $short ( sort keys %$mergedShortcuts ) {
-                my $long = $mergedShortcuts->{$short};
-                if( ref( $long ) eq 'ARRAY' ) {
-                    $long = join( ' ', @$long );
-                }
-                printf "%-" . $max . "s => %s\n", $short, ( $long ? $long : '<empty>' );
             }
         } else {
-            foreach my $short ( sort keys %$mergedShortcuts ) {
-                print "$short\n";
-            }
+            printf( "%s => <noop>\n", $showTask );
         }
+        exit 0;
+
     } else {
-        print "No shortcut task names defined.\n";
+        fatal( "Task not known: $showTask\n" );
     }
-    exit 0;
 }
 
 # Now figure out the task(s) to run -- we either find the single task, or assemble a Sequential
 
-my $rootTask = _parseArgvToTask( \@ARGV );
+my $rootTask = _determineTask( \@ARGV );
 $rootTask->setResolver( $constants );
 
-my $taskRun = Macrobuild::TaskRun->new( $inputJson, $rootTask );
+my $taskRun = Macrobuild::TaskRun->new( {}, $rootTask );
 my $exit    = $rootTask->run( $taskRun, $dryRun );
 
 if( $exit < 0 ) {
@@ -163,135 +145,69 @@ if( $exit < 0 ) {
     exit( 0 );
 }
 
-my $output = $taskRun->getOutput();
-if( $outputFile ) {
-    UBOS::Utils::writeJsonToFile( $outputFile, $output );
-} elsif( keys %$output ) {
-    UBOS::Utils::writeJsonToStdout( $taskRun->getOutput() );
-}
 exit( 0 );
 
 #####
-sub _parseArgvToTask {
-    my $args = shift;
+sub _determineTask {
+    my $argsP = shift;
 
-    my $retTask          = undef;
-    my $sharedVars       = undef; # The ones before the first task has been mentioned
-    my $currentTaskName  = undef;
-    my $currentVars      = {};
+    my $ret = Macrobuild::CompositeTasks::Sequential->new();
 
-    unless( ref( $args )) {
-        $args = [ split( /\s+/, $args ) ]; # allow to use string instead of array if no further arguments
-    }
+    foreach my $taskDef ( @$argsP ) {
 
-    for my $arg ( @$args ) {
-        $arg =~ s!^\s+!!;
-        $arg =~ s!\s+$!!;
-        if( $arg =~ m!^([^=]+)=(.*)$! ) {
-            my( $key, $value ) = ( $1, $2 );
-            if( exists( $currentVars->{$key} )) {
-                unless( ref( $currentVars->{$key} )) {
-                    # turn it into an array
-                    $currentVars->{$key} = [ $currentVars->{$key} ];
-                }
-                push @{$currentVars->{$key}}, $value;
+        my $newTask = undef;
+
+        if( ref( $taskDef ) eq 'ARRAY' ) {
+            if( @$taskDef ) {
+                # task name plus optional arguments
+                info( 'Expanding task:', $taskDef->[0] );
+
+                $newTask = _createTask( @$taskDef );
             } else {
-                $currentVars->{$key} = $value;
+                info( 'No op task' );
             }
+
         } else {
-            if( !$currentTaskName && %$currentVars ) { # we don't have a task yet (just about to get one), so this is env vars
-                $sharedVars  = $currentVars;
-                $currentVars = {};
-            }
-            if( $currentTaskName ) { # we just finished parsing a task
-                my %mergedVars;
-                if( $sharedVars ) {
-                    %mergedVars = ( %$sharedVars , %$currentVars ); # current overwrites shared
-                } else {
-                    %mergedVars = ( %$currentVars );
-                }
+            # task name without arguments
+            info( 'Expanding task:', $taskDef );
 
-                my $newTask = _createTask( $currentTaskName, \%mergedVars );
-                if( $retTask ) {
-                    unless( ref $retTask eq 'Macrobuild::CompositeTasks::Sequential' ) {
-                        my $newRetTask = Macrobuild::CompositeTasks::Sequential->new();
-                        $newRetTask->appendTask( $retTask );
-                        $retTask = $newRetTask;
-                    }
-                    $retTask->appendTask( $newTask );
-                } else {
-                    $retTask = $newTask;
-                }
-
-                $currentTaskName = undef;
-                $currentVars     = {};
+            if( exists( $tasks->{$taskDef} )) {
+                $newTask = _determineTask( $tasks->{$taskDef} );
+            } else {
+                fatal( 'Cannot find task', $taskDef );
             }
-            $currentTaskName = $arg;
         }
+
+        if( $newTask ) {
+            $ret->appendTask( $newTask );
+        }
+
     }
-    if( $currentTaskName ) {
-        my %mergedVars;
-        if( $sharedVars ) {
-            %mergedVars = ( %$sharedVars , %$currentVars ); # current overwrites shared
-        } else {
-            %mergedVars = ( %$currentVars );
-        }
-        my $newTask = _createTask( $currentTaskName, \%mergedVars );
-        if( $retTask ) {
-            unless( ref $retTask eq 'Macrobuild::CompositeTasks::Sequential' ) {
-                my $newRetTask = Macrobuild::CompositeTasks::Sequential->new();
-                $newRetTask->appendTask( $retTask );
-                $retTask = $newRetTask;
-            }
-            $retTask->appendTask( $newTask );
-        } else {
-            $retTask = $newTask;
-        }
-    } else {
-        fatal( 'No task name(s) given' );
-    }
-
-    return $retTask;
+    return $ret;
 }
 
 #####
 sub _createTask {
-    my $taskName       = shift;
-    my $vars           = shift;
+    my $taskName = shift;
+    my @vars     = @_;
 
-    my $ret = undef;
-    # shortcuts can be defined in all files, and don't override each other
-    if( $allShortcuts ) {
-        for my $shortcuts ( @$allShortcuts ) {
-            if( exists( $shortcuts->{$taskName} )) {
-                my @newArgs = @{$shortcuts->{$taskName}};
-                push @newArgs, map { my $x = $_;
-                                     ref( $vars->{$x} )
-                                         ? ( map { "$x=$_" } @{$vars->{$x}} )
-                                         : ( "$x=" . $vars->{$x} )
-                                   } sort keys %$vars;
-                $ret = _parseArgvToTask( \@newArgs );
-                last;
-            }
-        }
-    }
-    unless( $ret ) {
-        if( $taskName =~ m!::! ) {
-            # Perl package name has been given as a task name
-            eval "require $taskName" || fatal( 'Cannot load package', "$taskName\n", $@ );
+    if( $taskName =~ m!::! ) {
+        # Perl package name has been given as a task name
+        eval "require $taskName" || fatal( 'Cannot load package', "$taskName\n", $@ );
 
+    } else {
+        my $fileName = $taskName;
+        if( $fileName =~ m!^(.*)\.pm$! ) {
+            $taskName = $1;
         } else {
-            my $fileName = $taskName;
-            if( $fileName =~ m!^(.*)\.pm$! ) {
-                $taskName = $1;
-            } else {
-                $fileName = "$fileName.pm";
-            }
-            eval "require '$fileName';" || fatal( 'Cannot read file', "$fileName\n", $@ );
-            $taskName =~ s!/!::!g;
+            $fileName = "$fileName.pm";
         }
-        $ret = $taskName->new( %$vars );
+        eval "require '$fileName';" || fatal( 'Cannot read file', "$fileName\n", $@ );
+        $taskName =~ s!/!::!g;
     }
+    my @realVars = map{ /(.*)=(.*)/; ( $1, $2 ) } @vars;
+    my $ret = $taskName->new( @realVars );
+
     return $ret;
 }
 
@@ -320,23 +236,8 @@ sub synopsisHelpQuit {
         print <<END;
 macrobuild can be invoked as follows:
 
-    macrobuild <task>
-        Run a task. <task> is either a Perl module on the current path by
-        that name, or the name of a shortcut defined in the settings.pl
-        file.
-
-    macrobuild <task> <key>=<value> ...
-        Run a task. Prior to running, set the task's member variable <key>
-        to <value>. Any number of key-value pairs may be given.
-
-    macrobuild <task1> <key1>=<value1> ... <task2> <key2>=<value2> ...
-        Run task <task1>, followed by <task2>. Prior to running, set each
-        task's member variable(s) according to the key pairs following it
-        until the next task is listed. Any number of tasks may be listed.
-
-    macrobuild <key0=value0> <task1> <key1>=<value1> ... <task2> <key2>=<value2> ...
-        Run as before, but set the value of <key0> to <value0> for all
-        listed tasks. This is a shorthand notation.
+    macrobuild <task> ...
+        Run one or more tasks defined in tasks.pl.
 
 The following optional arguments can be provided:
 
@@ -346,20 +247,11 @@ The following optional arguments can be provided:
     --verbose
         Display extra output. May be repeated for even more output.
 
-    --in <file>
-        Read and parse JSON file <file> and provide its content to the first
-        task to be run as input
+    --list-tasks
+        Do not run any tasks. Show the known tasks instead.
 
-    --out <file>
-        Do not write any resulting JSON output to the console, but write
-        it to file <file> instead.
-
-    --list-shortcuts
-        Do not run any tasks. Show the known task shortcuts instead.
-        Adding -v provides more detail.
-
-    --show-shortcut <name>
-        Show the expansion of the shortcut <name>.
+    --show-tasks <task>
+        Show the expansion of the task <tasl>.
 
     --print-vars
         Show all named values that are defined globally (not local to a
