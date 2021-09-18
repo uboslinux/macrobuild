@@ -250,7 +250,7 @@ The following optional arguments can be provided:
     --list-tasks
         Do not run any tasks. Show the known tasks instead.
 
-    --show-tasks <task>
+    --show-task <task>
         Show the expansion of the task <tasl>.
 
     --print-vars
