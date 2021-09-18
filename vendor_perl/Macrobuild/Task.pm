@@ -35,7 +35,7 @@ sub new {
 
     for( my $i=0; $i<@args ; $i+=2 ) {
         eval {
-            if( exists( $self->{$args[$i]} )) {
+            if( defined( $self->{$args[$i]} )) {
                 if( ref( $self->{$args[$i]} ) eq 'ARRAY' ) {
                     push @{$self->{$args[$i]}}, $args[$i+1];
                 } else {
