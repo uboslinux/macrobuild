@@ -170,6 +170,11 @@ sub _scaryReplace {
     my $resolver        = $self;
     my $ret             = $current;
 
+    unless( defined( $ret )) {
+        error( 'Undefined value in _scaryReplace:', $s, $unresolvedOk, $replacementTrace );
+        return undef;
+    }
+
     while( $resolver ) {
         my %replacingNow = ();
 
