@@ -266,7 +266,7 @@ The following optional arguments can be provided:
         Do not run any tasks. Show the known tasks instead.
 
     --show-task <task>
-        Show the expansion of the task <tasl>.
+        Show the expansion of the task <task>.
 
     --print-vars
         Show all named values that are defined globally (not local to a
